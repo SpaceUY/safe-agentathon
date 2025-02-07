@@ -1,0 +1,21 @@
+{
+  "multiSigs": [
+    {
+      "chainId": "84532",
+      "address": "0x6fB0A20D6DefF6d6be127Fa86B754Ff12249631C",
+      "rpcUrl": "https://84532.rpc.thirdweb.com"
+    }
+  ],
+  "txsToOperate": {
+    "upgradeToAndCall": {
+      "checks": [
+        "upgrade-verification",
+        "upgrade-to-same-version-across-chains"
+      ],
+      "chains": [84532],
+      "2fa": { "type": "phone", "value": "+59896309671" },
+      "holdToReplicate": true
+    }
+  },
+  "interactions": ["get-signer-address", "get-operation-status"]
+}
