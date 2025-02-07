@@ -1,4 +1,5 @@
 {
+  "isPayer": true,
   "multiSigs": [
     {
       "chainId": "84532",
@@ -12,10 +13,14 @@
         "upgrade-verification",
         "upgrade-to-same-version-across-chains"
       ],
-      "chains": [84532],
-      "2fa": { "type": "phone", "value": "+59896309671" },
+      "chainIds": ["84532"],
+      "twoFA": { "type": "phone", "value": "+59896309671" },
       "holdToReplicate": true
     }
   },
-  "interactions": ["get-signer-address", "get-operation-status"]
+  "interactions": [
+    "get-signer-address",
+    "get-operation-status",
+    "get-operation-details"
+  ]
 }
