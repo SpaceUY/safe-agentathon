@@ -6,13 +6,13 @@ export class AgentController {
   constructor(private readonly appService: AgentService) {}
   @Get()
   getInteract(@Query('interaction') interactionKey: string): Promise<any> {
-    return this.appService.interact(interactionKey);
+    return this.appService.performInteraction(interactionKey);
   }
   @Post()
   postInteract(
     @Query('interaction') interactionKey: string,
     @Body('params') params: any,
   ): Promise<any> {
-    return this.appService.interact(interactionKey, params);
+    return this.appService.performInteraction(interactionKey, params);
   }
 }

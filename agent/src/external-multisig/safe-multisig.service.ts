@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import Safe from '@safe-global/protocol-kit';
+import { SafeMultisigTransactionResponse } from '@safe-global/types-kit';
 import SafeApiKit from '@safe-global/api-kit';
 
 @Injectable()
@@ -19,13 +20,12 @@ export class SafeMultisigService {
     multisig: string;
     chainId: string;
     rpcUrl: string;
-  }): Promise<string> {
-    const { multisig, chainId, rpcUrl } = params;
+  }): Promise<SafeMultisigTransactionResponse | undefined> {
+    const { multisig, chainId } = params;
     const apiKit = new SafeApiKit({
       chainId: BigInt(chainId),
     });
     const pendingTransactions = await apiKit.getPendingTransactions(multisig);
-    const transaction = pendingTransactions.results[0];
-    return JSON.stringify(transaction);
+    if (pendingTransactions.count > 0) return pendingTransactions.results[0];
   }
 }

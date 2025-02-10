@@ -36,7 +36,11 @@ export class AgentConfiguration {
     return operations;
   }
 
-  public static getMultisigs(): Multisig[] {
+  public static getTxToOperate(key: string): TxToOperate {
+    return AgentConfiguration.getConfig().txsToOperate[key];
+  }
+
+  public static getMultisigs(): MultiSig[] {
     return AgentConfiguration.getConfig().multiSigs;
   }
 }
@@ -57,24 +61,26 @@ export interface Configuration {
   isPayer: boolean;
   autonomousProposalListener: boolean;
   rejectTxIfNotRegistered: boolean;
-  multiSigs: Multisig[];
+  multiSigs: MultiSig[];
   txsToOperate: TxsToOperate;
   interactions: AgentInteractions[];
 }
 
-interface Multisig {
+export interface MultiSig {
   chainId: string;
   address: string;
   rpcUrl: string;
 }
 
 interface TxsToOperate {
-  [key: string]: {
-    checks: AgentChecks[];
-    chainIds: string[];
-    twoFA: TwoFactor | undefined;
-    holdToReplicate: boolean;
-  };
+  [key: string]: TxToOperate;
+}
+
+interface TxToOperate {
+  checks: AgentChecks[];
+  chainIds: string[];
+  twoFA: TwoFactor | undefined;
+  holdToReplicate: boolean;
 }
 
 interface TwoFactor {
