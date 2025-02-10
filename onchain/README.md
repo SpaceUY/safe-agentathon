@@ -14,10 +14,18 @@ npx hardhat ignition deploy ./ignition/modules/Lock.ts
 
 #
 
-npx hardhat ignition deploy ignition/modules/BoxProxy.ts --network base_testnet --strategy create2 --verify
-npx hardhat ignition deploy ignition/modules/BoxV2.ts --network base_testnet --strategy create2 --verify
+<!-- BASE DEPLOY -->
 
-npx hardhat test test/BoxUpgradeability.ts --network base_testnet
+NETWORK_NAME=base_testnet npx hardhat ignition deploy ignition/modules/BoxProxy.ts --network base_testnet --strategy create2 --verify
+NETWORK_NAME=base_testnet npx hardhat ignition deploy ignition/modules/BoxV2.ts --network base_testnet --strategy create2 --verify
+
+<!-- SEPOLIA DEPLOY -->
+
+NETWORK_NAME=sepolia_testnet npx hardhat ignition deploy ignition/modules/BoxProxy.ts --network sepolia_testnet --strategy create2 --verify
+NETWORK_NAME=sepolia_testnet npx hardhat ignition deploy ignition/modules/BoxV2.ts --network sepolia_testnet --strategy create2 --verify
+
+NETWORK_NAME=base_testnet npx hardhat test test/BoxUpgradeability.ts --network base_testnet
+NETWORK_NAME=sepolia_testnet npx hardhat test test/BoxUpgradeability.ts --network sepolia_testnet
 
 #
 

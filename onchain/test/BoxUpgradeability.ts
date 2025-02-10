@@ -5,6 +5,7 @@ import BoxV2Module from "../ignition/modules/BoxV2";
 import Safe from "@safe-global/protocol-kit";
 import SafeApiKit from "@safe-global/api-kit";
 import { SafeEthersSigner } from "@safe-global/safe-ethers-adapters";
+import { getMultisigAddress } from "./utils";
 
 describe("BoxUpgradeability", function () {
   // We define a fixture to reuse the same setup in every test.
@@ -49,7 +50,10 @@ describe("BoxUpgradeability", function () {
         );
       }
       const rpcUrl = (hre.config.networks[hre.network.name] as any).url;
-      const multisig = process.env.MULTISIG!;
+      console.log({ rpcUrl });
+
+      const multisig = getMultisigAddress();
+      console.log({ multisig });
       const boxProxy = await getBoxProxyV1(multisig);
       const boxProxyAddress = await boxProxy.getAddress();
       const boxV2DeployedAddress = await getBoxV2DeployedAddress();
@@ -109,7 +113,8 @@ describe("BoxUpgradeability", function () {
 
     //https://help.safe.global/en/articles/235770-proposers
     it.skip("Propose tx with proposer", async function () {
-      const multisig = process.env.MULTISIG!;
+      const multisig = getMultisigAddress();
+
       const rpcUrl = (hre.config.networks[hre.network.name] as any).url;
       //0x02ac83F5c6Af46FF26a3E2F8AFF82C62B6286d47
       const proposerWallet = new hre.ethers.Wallet(
