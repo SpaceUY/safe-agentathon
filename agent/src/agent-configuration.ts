@@ -3,6 +3,10 @@ import * as rawAgentConfig from './agent-config.json';
 export class AgentConfiguration {
   private static getConfig = () => rawAgentConfig as Configuration;
 
+  public static isProposalListener(): boolean {
+    return this.getConfig().autonomousProposalListener;
+  }
+
   public static getAgentChecks(): AgentChecks[] {
     const checks: AgentChecks[] = [];
     const operations = Object.keys(AgentConfiguration.getConfig().txsToOperate);
@@ -31,6 +35,10 @@ export class AgentConfiguration {
     const operations = Object.keys(AgentConfiguration.getConfig().txsToOperate);
     return operations;
   }
+
+  public static getMultisigs(): Multisig[] {
+    return AgentConfiguration.getConfig().multiSigs;
+  }
 }
 
 export enum AgentChecks {
@@ -47,7 +55,7 @@ export enum AgentInteractions {
 
 export interface Configuration {
   isPayer: boolean;
-  autonomousMultisigListener: boolean;
+  autonomousProposalListener: boolean;
   rejectTxIfNotRegistered: boolean;
   multiSigs: Multisig[];
   txsToOperate: TxsToOperate;

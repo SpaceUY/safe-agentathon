@@ -1,6 +1,6 @@
 {
   "isPayer": true,
-  "autonomousMultisigListener": true,
+  "autonomousProposalListener": true,
   "rejectTxIfNotRegistered": true,
   "multiSigs": [
     {
