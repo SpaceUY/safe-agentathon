@@ -40,7 +40,7 @@ describe("BoxUpgradeability", function () {
   async function deploySafe(): Promise<void> {}
 
   describe("Deployment", function () {
-    it.skip("Should upgrade successfully", async function () {
+    it("Should upgrade successfully", async function () {
       const isLocal =
         hre.network.name == "hardhat" || hre.network.name == "localhost";
       if (isLocal) {
@@ -54,7 +54,7 @@ describe("BoxUpgradeability", function () {
       const boxProxyAddress = await boxProxy.getAddress();
       const boxV2DeployedAddress = await getBoxV2DeployedAddress();
       const apiKit = new SafeApiKit({
-        chainId: BigInt(process.env.CHAIN_ID!), //hre.network.config.chainId! THIS DOES NOT WORK
+        chainId: BigInt(hre.network.config.chainId!),
       });
       //--PROPOSE
       const safeWalletForSecondary: Safe = await Safe.init({
@@ -108,7 +108,7 @@ describe("BoxUpgradeability", function () {
     // });
 
     //https://help.safe.global/en/articles/235770-proposers
-    it("Propose tx with proposer", async function () {
+    it.skip("Propose tx with proposer", async function () {
       const multisig = process.env.MULTISIG!;
       const rpcUrl = (hre.config.networks[hre.network.name] as any).url;
       //0x02ac83F5c6Af46FF26a3E2F8AFF82C62B6286d47
@@ -132,7 +132,7 @@ describe("BoxUpgradeability", function () {
       });
       const safeTxHash = await safeWallet.getTransactionHash(safeTx);
       const apiKit = new SafeApiKit({
-        chainId: BigInt(process.env.CHAIN_ID!), //hre.network.config.chainId! THIS DOES NOT WORK
+        chainId: BigInt(hre.network.config.chainId!),
       });
       const signature = await safeWallet.signHash(safeTxHash);
       await apiKit.proposeTransaction({

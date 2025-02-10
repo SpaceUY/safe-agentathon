@@ -42,6 +42,7 @@ const config: HardhatUserConfig = {
       ],
     },
     base_testnet: {
+      chainId: 84532,
       url: rpcs.base_testnet,
       accounts: [process.env.MAIN_ACCOUNT_KEY!],
     },

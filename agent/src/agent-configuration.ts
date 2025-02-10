@@ -36,6 +36,7 @@ export enum AgentInteractions {
 export interface Configuration {
   isPayer: boolean;
   autonomousMultisigListener: boolean;
+  rejectTxIfNotRegistered: boolean;
   multiSigs: Multisig[];
   txsToOperate: TxsToOperate;
   interactions: AgentInteractions[];
