@@ -13,7 +13,18 @@ export class AgentConfiguration {
   }
 
   public static getAgentInteractions(): AgentInteractions[] {
-    return AgentConfiguration.getConfig().interactions;
+    const interactions: AgentInteractions[] =
+      AgentConfiguration.getConfig().interactions || [];
+
+    const operations = Object.keys(AgentConfiguration.getConfig().txsToOperate);
+    operations.forEach((op) => {
+      if (AgentConfiguration.getConfig().txsToOperate[op].twoFA) {
+        interactions.push(AgentInteractions.PUSH_TWO_FACTOR);
+        return;
+      }
+    });
+
+    return interactions;
   }
 
   public static getTxsToOperate(): string[] {
@@ -31,6 +42,7 @@ export enum AgentInteractions {
   GET_SIGNER_ADDRESS = 'get-signer-address',
   GET_OPERATION_STATUS = 'get-operation-status',
   GET_OPERATION_DETAILS = 'get-operation-details',
+  PUSH_TWO_FACTOR = 'push-two-factor',
 }
 
 export interface Configuration {

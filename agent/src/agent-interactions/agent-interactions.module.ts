@@ -41,9 +41,15 @@ export class AgentInteractionsModule {
         useClass: AgentInteractionGetOperationDetailsService,
       });
 
+    if (agentInteractionsConfigured.includes(AgentInteractions.PUSH_TWO_FACTOR))
+      providers.push({
+        provide: AgentInteractions.PUSH_TWO_FACTOR,
+        useClass: AgentInteractionPushTwoFAcodeService,
+      });
+
     return {
       module: AgentInteractionsModule,
-      providers: [AgentInteractionPushTwoFAcodeService, ...providers],
+      providers,
     };
   }
 }

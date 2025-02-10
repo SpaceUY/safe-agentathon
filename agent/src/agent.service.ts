@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { IAgentInteractionServiceInterface } from './agent-interactions/agent-interaction.service.interface';
+import NotAvailableError from './_common/errors/not-available.error';
 
 @Injectable()
 export class AgentService {
@@ -14,7 +15,7 @@ export class AgentService {
           interactionKey,
         );
     } catch (ex) {
-      throw new Error('Interaction not found or not configured');
+      throw new NotAvailableError('Interaction not found or not configured');
     }
 
     return interaction;
