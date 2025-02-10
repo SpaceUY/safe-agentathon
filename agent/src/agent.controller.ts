@@ -5,14 +5,14 @@ import { AgentService } from './agent.service.js';
 export class AgentController {
   constructor(private readonly appService: AgentService) {}
   @Get()
-  getInteract(@Query('interaction') interaction: string): Promise<any> {
-    return this.appService.interact(interaction);
+  getInteract(@Query('interaction') interactionKey: string): Promise<any> {
+    return this.appService.interact(interactionKey);
   }
   @Post()
   postInteract(
-    @Query('interaction') interaction: string,
+    @Query('interaction') interactionKey: string,
     @Body('params') params: any,
   ): Promise<any> {
-    return this.appService.interact(interaction, params);
+    return this.appService.interact(interactionKey, params);
   }
 }

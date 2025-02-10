@@ -1,5 +1,6 @@
 {
   "isPayer": true,
+  "autonomousMultisigListener": true,
   "multiSigs": [
     {
       "chainId": "84532",
