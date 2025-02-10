@@ -1,16 +1,24 @@
 import * as rawAgentConfig from './agent-config.json';
 
-export class AgentConfigurationService {
+export class AgentConfiguration {
   private static getConfig = () => rawAgentConfig as Configuration;
 
   public static getAgentChecks(): AgentChecks[] {
-    return [];
+    const checks: AgentChecks[] = [];
+    const operations = Object.keys(AgentConfiguration.getConfig().txsToOperate);
+    operations.forEach((op) => {
+      checks.push(...AgentConfiguration.getConfig().txsToOperate[op].checks);
+    });
+    return checks;
   }
 
-  public static getTxsToOperate() {
-    const operations = Object.keys(
-      AgentConfigurationService.getConfig().txsToOperate,
-    );
+  public static getAgentInteractions(): AgentInteractions[] {
+    return AgentConfiguration.getConfig().interactions;
+  }
+
+  public static getTxsToOperate(): string[] {
+    const operations = Object.keys(AgentConfiguration.getConfig().txsToOperate);
+    return operations;
   }
 }
 
@@ -42,7 +50,7 @@ interface TxsToOperate {
   [key: string]: {
     checks: AgentChecks[];
     chainIds: string[];
-    twoFA: TwoFactor;
+    twoFA: TwoFactor | undefined;
     holdToReplicate: boolean;
   };
 }

@@ -1,3 +1,3 @@
 export interface IAgentCheckServiceInterface {
-  performCheck(): Promise<boolean>;
+  performCheck(): Promise<void>;
 }

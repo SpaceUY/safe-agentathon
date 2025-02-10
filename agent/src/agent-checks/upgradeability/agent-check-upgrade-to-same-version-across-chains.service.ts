@@ -5,7 +5,7 @@ import { IAgentCheckServiceInterface } from '../agent-checks.service.interface';
 export class AgentCheckUpgradeToSameVersionAcrossChainsService
   implements IAgentCheckServiceInterface
 {
-  performCheck(): Promise<boolean> {
+  performCheck(): Promise<void> {
     throw new Error('Method not implemented.');
   }
 }
