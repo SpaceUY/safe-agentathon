@@ -6,6 +6,7 @@ dotenv.config();
 
 export const rpcs = {
   base_testnet: `https://84532.rpc.thirdweb.com`,
+  sepolia_testnet: `https://11155111.rpc.thirdweb.com`,
 };
 
 const config: HardhatUserConfig = {
@@ -20,6 +21,7 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       base_testnet: process.env.ETHERS_BASE_API_KEY!,
+      sepolia_testnet: process.env.ETHERS_SEPOLIA_API_KEY!,
     },
     customChains: [
       {
@@ -28,6 +30,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
           browserURL: "https://basescan.org/",
+        },
+      },
+      {
+        network: "sepolia_testnet",
+        chainId: 11155111,
+        urls: {
+          apiURL: "https://api-sepolia.etherscan.io/api",
+          browserURL: "https://sepolia.etherscan.io/",
         },
       },
     ],
@@ -44,6 +54,11 @@ const config: HardhatUserConfig = {
     base_testnet: {
       chainId: 84532,
       url: rpcs.base_testnet,
+      accounts: [process.env.MAIN_ACCOUNT_KEY!],
+    },
+    sepolia_testnet: {
+      chainId: 11155111,
+      url: rpcs.sepolia_testnet,
       accounts: [process.env.MAIN_ACCOUNT_KEY!],
     },
   },
