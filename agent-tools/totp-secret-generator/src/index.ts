@@ -6,5 +6,5 @@ function generateSecretKey(agentId: string): string {
   return secret.base32;
 }
 
-const agentId: string = "agent1";
+const agentId: string = "agent space";
 generateSecretKey(agentId);
