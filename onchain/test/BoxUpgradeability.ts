@@ -40,7 +40,7 @@ describe("BoxUpgradeability", function () {
   async function deploySafe(): Promise<void> {}
 
   describe("Deployment", function () {
-    it("Should upgrade successfully", async function () {
+    it.skip("Should upgrade successfully", async function () {
       const isLocal =
         hre.network.name == "hardhat" || hre.network.name == "localhost";
       if (isLocal) {

@@ -9,6 +9,8 @@
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
+    "start:agent1": "dotenv -e .env.agent-1 nest start --watch",
+    "start:agent2": "dotenv -e .env.agent-2 nest start --watch",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
@@ -26,6 +28,8 @@
     "@nestjs/schedule": "^5.0.1",
     "@safe-global/api-kit": "^2.5.8",
     "@safe-global/protocol-kit": "^5.2.1",
+    "dotenv-cli": "^8.0.0",
+    "ethers": "^6.13.5",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
