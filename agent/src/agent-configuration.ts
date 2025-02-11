@@ -22,7 +22,7 @@ export class AgentConfiguration {
 
     const operations = Object.keys(AgentConfiguration.getConfig().txsToOperate);
     operations.forEach((op) => {
-      if (AgentConfiguration.getConfig().txsToOperate[op].twoFA) {
+      if (AgentConfiguration.getConfig().txsToOperate[op].twoFArequired) {
         interactions.push(AgentInteractions.PUSH_TWO_FACTOR);
         return;
       }
@@ -43,6 +43,10 @@ export class AgentConfiguration {
   public static getMultisigs(): Multisig[] {
     return AgentConfiguration.getConfig().multisigs;
   }
+
+  public static getTotp(): string {
+    return this.getConfig().totp;
+  }
 }
 
 export enum AgentChecks {
@@ -60,6 +64,7 @@ export enum AgentInteractions {
 export interface Configuration {
   isPayer: boolean;
   autonomousProposalListener: boolean;
+  totp: string;
   multisigs: Multisig[];
   txsToOperate: TxsToOperate;
   interactions: AgentInteractions[];
@@ -78,11 +83,6 @@ interface TxsToOperate {
 export interface TxToOperate {
   checks: AgentChecks[];
   chainIds: string[];
-  twoFA: TwoFactor | undefined;
+  twoFArequired: boolean;
   holdToReplicate: boolean;
-}
-
-interface TwoFactor {
-  type: 'email' | 'phone';
-  value: string;
 }
