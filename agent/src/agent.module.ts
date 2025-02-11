@@ -10,6 +10,7 @@ import {
   AgentLocalSignerService,
   AgentSignerModule,
 } from './agent-signer/agent-signer.module';
+import { AgentStateService } from './agent-state.service';
 
 const agentCheckModule = AgentChecksModule.register();
 const agentInteractionsModule = AgentInteractionsModule.register();
@@ -25,6 +26,7 @@ const agentInteractionsModule = AgentInteractionsModule.register();
   controllers: [AgentController],
   providers: [
     AgentService,
+    AgentStateService,
     SafeMultisigService,
     AgentLocalSignerService,
     ...agentCheckModule.providers!,
