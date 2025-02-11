@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   IAgentCheckServiceInterface,
-  ProposalTx,
+  ProposalTxs,
 } from '../agent-checks.service.interface';
 import { Multisig } from 'src/agent-configuration';
 import { MultisigTransaction } from 'src/external-multisig/safe-multisig.service';
@@ -10,7 +10,7 @@ import { MultisigTransaction } from 'src/external-multisig/safe-multisig.service
 export class AgentCheckUpgradeToSameVersionAcrossChainsService
   implements IAgentCheckServiceInterface
 {
-  async performCheck(proposedTx: ProposalTx): Promise<boolean> {
+  async performCheck(proposedTx: ProposalTxs): Promise<boolean> {
     return true;
   }
 }

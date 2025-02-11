@@ -12,14 +12,17 @@ import { createCron } from './_common/helpers/cron.helper';
 import { safeFireAndForget } from './_common/helpers/promises.helper';
 import {
   IAgentCheckServiceInterface,
-  ProposalTx,
+  ProposalTxs,
 } from './agent-checks/agent-checks.service.interface';
 import {
   MultisigTransaction,
   SafeMultisigService,
 } from './external-multisig/external-multisig.module';
-import { AgentLocalSignerService } from './agent-signer/agent-signer.module';
-import { AgentState, AgentStateService } from './agent-state.service';
+import { IAgentSignerService } from './agent-signer/agent-signer.service.interface';
+import {
+  AgentState,
+  IAgentStateService,
+} from './agent-state/agent-state.service.interface';
 
 @Injectable()
 export class AgentService {
@@ -27,8 +30,10 @@ export class AgentService {
     private readonly _moduleRef: ModuleRef,
     private readonly _schedulerRegistry: SchedulerRegistry,
     @Inject() private readonly _safeAgentService: SafeMultisigService,
-    @Inject() private readonly _agentLocalSigner: AgentLocalSignerService,
-    @Inject() private readonly _agentStateService: AgentStateService,
+    @Inject('IAgentSignerService')
+    private readonly _agentSigner: IAgentSignerService,
+    @Inject('IAgentStateService')
+    private readonly _agentStateService: IAgentStateService,
   ) {
     safeFireAndForget(() => this.setAgent());
   }
@@ -40,11 +45,8 @@ export class AgentService {
       const job = createCron(CronExpression.EVERY_10_SECONDS, task);
       this._schedulerRegistry.addCronJob('proposalListener', job);
     }
-    await this._agentLocalSigner.createSigner();
-    console.log(
-      'SIGNER READY',
-      await this._agentLocalSigner.getSignerAddress(),
-    );
+    await this._agentSigner.createSigner();
+    console.log('SIGNER READY', await this._agentSigner.getSignerAddress());
   }
 
   private resolveInteraction<T, S>(interactionKey: string) {
@@ -88,79 +90,78 @@ export class AgentService {
       this._agentStateService.state = AgentState.PROCESSING;
       const operations = AgentConfiguration.getTxsToOperate();
       const multisigs = AgentConfiguration.getMultisigs();
-      const txsToExecute = await this.getLatestProposalTransactions(
+      const txs = await this.getLatestProposalTransactions(
         operations,
         multisigs,
       );
-      const proposalToExecute = this.getProposalToExecute(txsToExecute);
-      if (!proposalToExecute) {
-        console.log('No proposal to execute');
+      const proposal = this.getProposal(txs);
+      if (!proposal) {
+        console.log('No proposal found');
         this._agentStateService.state = AgentState.IDLE;
       } else {
-        const { proposalTx, status } =
-          await this.evalProposalExecution(proposalToExecute);
-        if (status == 'ready-to-execute') {
-          this._agentStateService.addProposalToExecute(proposalTx);
+        const { proposalTxs, status } =
+          await this.evalProposalExecution(proposal);
+        if (status == 'ready') {
+          this._agentStateService.addProposal(proposalTxs);
           this._agentStateService.state = AgentState.EXECUTING;
-          await this.executeProposal(proposalTx);
+          await this.confirmOrExecuteProposal(
+            proposalTxs,
+            AgentConfiguration.holdToReplicate(proposalTxs.operationName),
+          );
         } else if (status == 'two-fa-required') {
-          this._agentStateService.addForTwoFAConfirmation(proposalTx);
+          this._agentStateService.addForTwoFAConfirmation(proposalTxs);
           this._agentStateService.state = AgentState.WAITING_FOR_TWO_FA;
         } else {
           this._agentStateService.state = AgentState.IDLE;
         }
       }
     } else if (agentState == AgentState.WAITING_FOR_TWO_FA) {
-      const proposalTx = this._agentStateService.getProposalWaitingForTwoFA();
-      if (proposalTx) {
-        this._agentStateService.addProposalToExecute(proposalTx);
+      const proposalTxs = this._agentStateService.getProposalWaitingForTwoFA();
+      if (proposalTxs) {
+        this._agentStateService.addProposal(proposalTxs);
         this._agentStateService.state = AgentState.EXECUTING;
-        await this.executeProposal(proposalTx);
+        await this.confirmOrExecuteProposal(
+          proposalTxs,
+          AgentConfiguration.holdToReplicate(proposalTxs.operationName),
+        );
       } else if (!this._agentStateService.isThereAProposalWaitingForTwoFA()) {
         this._agentStateService.state = AgentState.IDLE;
       }
     } else if (agentState == AgentState.EXECUTING) {
-      const proposalTx = this._agentStateService.getProposalToExecute();
-      if (proposalTx) {
-        await this.executeProposal(proposalTx);
+      const proposalTxs = this._agentStateService.getProposal();
+      if (proposalTxs) {
+        await this.confirmOrExecuteProposal(
+          proposalTxs,
+          AgentConfiguration.holdToReplicate(proposalTxs.operationName),
+        );
       } else this._agentStateService.state = AgentState.IDLE;
     }
   }
 
-  private getProposalToExecute(
-    txsToExecute: Record<string, ProposalTx>,
-  ): { operationName: string; proposalTx: ProposalTx } | undefined {
+  private getProposal(
+    txs: Record<string, ProposalTxs>,
+  ): ProposalTxs | undefined {
     let proposalsAcrossChain = 0;
     let result;
-    Object.keys(txsToExecute).forEach((op) => {
-      const proposals = txsToExecute[op].proposalTxs.length;
+    Object.keys(txs).forEach((op) => {
+      const proposals = txs[op].proposalTxs.length;
       if (proposals > proposalsAcrossChain)
-        result = {
-          operationName: op,
-          proposalTxs: txsToExecute[op].proposalTxs,
-        };
+        result = { operationName: op, proposalTxs: txs[op].proposalTxs };
     });
-
     return result;
   }
 
-  private async evalProposalExecution(proposalToExecute: {
-    operationName: string;
-    proposalTx: ProposalTx;
-  }): Promise<{
-    proposalTx: ProposalTx;
-    status:
-      | 'holding-to-replicate'
-      | 'checks-not-passed'
-      | 'two-fa-required'
-      | 'ready-to-execute';
+  private async evalProposalExecution(proposalTxs: ProposalTxs): Promise<{
+    proposalTxs: ProposalTxs;
+    status: 'hold-to-check' | 'checks-not-passed' | 'two-fa-required' | 'ready';
+    holdToReplicate: boolean;
   }> {
-    const { operationName, proposalTx } = proposalToExecute;
-    const txToOperate = AgentConfiguration.getTxToOperate(operationName);
+    const { operationName } = proposalTxs;
 
-    if (txToOperate.holdToReplicate) {
-      const { readyToReplicate, waitingForChainIds } = this.isReadyToReplicate(
-        proposalTx.multisigs,
+    const txToOperate = AgentConfiguration.getTxToOperate(operationName);
+    if (txToOperate.holdToCheck) {
+      const { readyToReplicate, waitingForChainIds } = this.isReadyToCheck(
+        proposalTxs.multisigs,
         txToOperate,
       );
       if (!readyToReplicate) {
@@ -171,7 +172,11 @@ export class AgentService {
           waitingForChainIds.join(','),
           ']',
         );
-        return { proposalTx, status: 'holding-to-replicate' };
+        return {
+          proposalTxs,
+          status: 'hold-to-check',
+          holdToReplicate: txToOperate.holdToReplicate,
+        };
       }
     }
 
@@ -184,7 +189,7 @@ export class AgentService {
       checks.map(async (c) => {
         return {
           checkKey: c.checkKey,
-          result: await c.checker.performCheck(proposalTx),
+          result: await c.checker.performCheck(proposalTxs),
         };
       }),
     );
@@ -192,19 +197,19 @@ export class AgentService {
     if (checkFails.length > 0) {
       checkFails.forEach((cf) => console.log('Checks dont pass', cf.checkKey));
       return {
-        proposalTx: proposalTx,
+        proposalTxs: proposalTxs,
         status: 'checks-not-passed',
+        holdToReplicate: txToOperate.holdToReplicate,
       };
     }
     return {
-      proposalTx: proposalTx,
-      status: txToOperate.twoFArequired
-        ? 'two-fa-required'
-        : 'ready-to-execute',
+      proposalTxs: proposalTxs,
+      status: txToOperate.twoFArequired ? 'two-fa-required' : 'ready',
+      holdToReplicate: txToOperate.holdToReplicate,
     };
   }
 
-  private isReadyToReplicate(
+  private isReadyToCheck(
     multiSigsToBeUsedInproposalTxs: Multisig[],
     txToOperate: TxToOperate,
   ): { readyToReplicate: boolean; waitingForChainIds: string[] } {
@@ -229,41 +234,38 @@ export class AgentService {
   private async getLatestProposalTransactions(
     operations: string[],
     multisigs: Multisig[],
-  ) {
+  ): Promise<Record<string, ProposalTxs>> {
     const proposalTxs: {
       multisig: Multisig;
       proposalTxName: string;
       proposalTx: MultisigTransaction;
     }[] = [];
     for (const multisig of multisigs) {
-      const proposalTx = await this.getLatestProposalTransaction(multisig);
-      if (proposalTx) {
+      const latestsProposalTxs =
+        await this.getLatestProposalTransaction(multisig);
+      if (latestsProposalTxs) {
         //TODO: We need to consider native transfers
-        if (proposalTx?.dataDecoded?.method) {
+        if (latestsProposalTxs?.dataDecoded?.method) {
           proposalTxs.push({
             multisig,
-            proposalTxName: proposalTx.dataDecoded?.method,
-            proposalTx: proposalTx,
+            proposalTxName: latestsProposalTxs.dataDecoded?.method,
+            proposalTx: latestsProposalTxs,
           });
         }
       }
     }
-    const txsToExecute: Record<
-      string,
-      { multisigs: Multisig[]; proposalTxs: MultisigTransaction[] }
-    > = {};
+    const txs: Record<string, ProposalTxs> = {};
     operations.forEach((op) => {
-      if (!txsToExecute[op])
-        txsToExecute[op] = { multisigs: [], proposalTxs: [] };
-
-      txsToExecute[op].multisigs = proposalTxs
+      if (!txs[op])
+        txs[op] = { operationName: op, multisigs: [], proposalTxs: [] };
+      txs[op].multisigs = proposalTxs
         .filter((pt) => pt.proposalTxName == op)
         .map((pt) => pt.multisig);
-      txsToExecute[op].proposalTxs = proposalTxs
+      txs[op].proposalTxs = proposalTxs
         .filter((pt) => pt.proposalTxName == op)
         .map((pt) => pt.proposalTx);
     });
-    return txsToExecute;
+    return txs;
   }
 
   private async getLatestProposalTransaction(multisig: Multisig) {
@@ -276,5 +278,32 @@ export class AgentService {
     return txproposal;
   }
 
-  private async executeProposal(proposalTx: ProposalTx) {}
+  private async confirmOrExecuteProposal(
+    proposalTxs: ProposalTxs,
+    holdToReplicate: boolean,
+  ) {
+    try {
+      const agentSignerAddress = await this._agentSigner.getSignerAddress();
+      const proposalsAlreadyConfirmed = proposalTxs.proposalTxs.filter((pt) => {
+        pt.confirmations?.some((c) => c.owner == agentSignerAddress);
+      });
+      const proposalsNotConfirmed = proposalTxs.proposalTxs.filter((pt) => {
+        !pt.confirmations?.some((c) => c.owner == agentSignerAddress);
+      });
+
+      if (proposalsAlreadyConfirmed.length == proposalTxs.proposalTxs.length) {
+        //Execute if payer
+      } else {
+        //Have to confirm pendings and execute if not holdToReplicate
+        if (proposalsAlreadyConfirmed.length > 0 && !holdToReplicate) {
+          //Execute if payer
+        }
+        if (proposalsNotConfirmed.length > 0) {
+          //Confirm
+        }
+      }
+    } catch (ex) {
+      console.log('Error while executing confirmOrExecuteProposal');
+    }
+  }
 }

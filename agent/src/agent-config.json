@@ -22,6 +22,7 @@
       ],
       "chainIds": ["84532", "11155111"],
       "twoFArequired": true,
+      "holdToCheck": true,
       "holdToReplicate": true
     }
   },

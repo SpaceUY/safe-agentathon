@@ -1,8 +1,8 @@
 import { env } from 'src/_common/config';
-import { IAgentLocalSignerService } from './agent-signer.service.interface';
+import { IAgentSignerService } from './agent-signer.service.interface';
 import { ethers } from 'ethers';
 
-export class AgentLocalSignerService implements IAgentLocalSignerService {
+export class AgentLocalSignerService implements IAgentSignerService {
   async createSigner(): Promise<string> {
     //TODO: Create a signer instead of using a signer passed in the config
     return this.getSignerAddress();

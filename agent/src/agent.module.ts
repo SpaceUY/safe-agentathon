@@ -6,11 +6,9 @@ import { AgentInteractionsModule } from './agent-interactions/agent-interactions
 import { ExternalMultisigModule } from './external-multisig/external-multisig.module';
 import { SafeMultisigService } from './external-multisig/safe-multisig.service';
 import { ScheduleModule } from '@nestjs/schedule';
-import {
-  AgentLocalSignerService,
-  AgentSignerModule,
-} from './agent-signer/agent-signer.module';
-import { AgentStateService } from './agent-state.service';
+import { AgentSignerModule } from './agent-signer/agent-signer.module';
+import { AgentStateModule } from './agent-state/agent-state.module';
+import { AgentMemoryStateService } from './agent-state/agent-memory-state.service';
 
 const agentCheckModule = AgentChecksModule.register();
 const agentInteractionsModule = AgentInteractionsModule.register();
@@ -22,13 +20,12 @@ const agentInteractionsModule = AgentInteractionsModule.register();
     ExternalMultisigModule,
     ScheduleModule.forRoot(),
     AgentSignerModule,
+    AgentStateModule,
   ],
   controllers: [AgentController],
   providers: [
     AgentService,
-    AgentStateService,
     SafeMultisigService,
-    AgentLocalSignerService,
     ...agentCheckModule.providers!,
     ...agentInteractionsModule.providers!,
   ],

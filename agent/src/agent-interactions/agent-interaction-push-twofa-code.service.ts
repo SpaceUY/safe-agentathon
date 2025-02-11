@@ -2,23 +2,26 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IAgentInteractionServiceInterface } from './agent-interaction.service.interface';
 import * as speakeasy from 'speakeasy';
 import { AgentConfiguration } from 'src/agent-configuration';
-import { AgentStateService } from 'src/agent-state.service';
+import { IAgentStateService } from 'src/agent-state/agent-state.module';
 
 @Injectable()
 export class AgentInteractionPushTwoFAcodeService
-  implements IAgentInteractionServiceInterface<string, string>
+  implements IAgentInteractionServiceInterface<{ token: string }, string>
 {
   private readonly secret: string = AgentConfiguration.getTotp();
 
-  constructor(private readonly _agentStateService: AgentStateService) {}
+  constructor(
+    @Inject('IAgentStateService')
+    private readonly _agentStateService: IAgentStateService,
+  ) {}
 
-  async performInteraction(token: string): Promise<string> {
+  async performInteraction(param: { token: string }): Promise<string> {
     if (!this._agentStateService.isThereAProposalWaitingForTwoFA())
       return 'There is no operation waiting for 2fa';
     const isTokenValid = speakeasy.totp.verify({
       secret: this.secret,
       encoding: 'base32',
-      token,
+      token: param.token,
       window: 1,
     });
     if (isTokenValid) {
