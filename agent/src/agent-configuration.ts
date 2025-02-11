@@ -40,6 +40,14 @@ export class AgentConfiguration {
     return AgentConfiguration.getConfig().txsToOperate[key];
   }
 
+  public static holdToCheck(key: string): boolean {
+    return AgentConfiguration.getTxToOperate(key).holdToCheck;
+  }
+
+  public static holdToReplicate(key: string): boolean {
+    return AgentConfiguration.getTxToOperate(key).holdToReplicate;
+  }
+
   public static getMultisigs(): Multisig[] {
     return AgentConfiguration.getConfig().multisigs;
   }
@@ -84,5 +92,6 @@ export interface TxToOperate {
   checks: AgentChecks[];
   chainIds: string[];
   twoFArequired: boolean;
+  holdToCheck: boolean;
   holdToReplicate: boolean;
 }
