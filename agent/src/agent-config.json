@@ -1,6 +1,7 @@
 {
   "isPayer": true,
   "autonomousProposalListener": true,
+  "totp": "EVMEKJB6LVKDUSC2ORYUGXTCIZETCTS5GZYSGRS5PU5GY3DCENSA",
   "multisigs": [
     {
       "chainId": "84532",
@@ -20,7 +21,7 @@
         "upgrade-to-same-version-across-chains"
       ],
       "chainIds": ["84532", "11155111"],
-      "twoFA": { "type": "phone", "value": "+59896309671" },
+      "twoFArequired": true,
       "holdToReplicate": true
     }
   },
