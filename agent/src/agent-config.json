@@ -1,7 +1,6 @@
 {
   "isPayer": true,
   "autonomousProposalListener": true,
-  "rejectTxIfNotRegistered": true,
   "multisigs": [
     {
       "chainId": "84532",

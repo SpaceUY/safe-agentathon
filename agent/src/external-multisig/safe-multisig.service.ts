@@ -18,7 +18,7 @@ export class SafeMultisigService {
     });
   }
 
-  public async getProposedTransaction(params: {
+  public async getLatestProposalTransaction(params: {
     multisig: string;
     chainId: string;
     rpcUrl: string;
@@ -28,7 +28,15 @@ export class SafeMultisigService {
       chainId: BigInt(chainId),
     });
     const pendingTransactions = await apiKit.getPendingTransactions(multisig);
-    if (pendingTransactions.count > 0) return pendingTransactions.results[0];
+    if (pendingTransactions.count > 0) {
+      const pendingTransactionsSortedBySubmissionDate =
+        pendingTransactions.results.sort(
+          (a, b) =>
+            new Date(b.submissionDate).getTime() -
+            new Date(a.submissionDate).getTime(),
+        );
+      return pendingTransactionsSortedBySubmissionDate[0];
+    }
   }
 
   public async confirmProposedTransaction(params: {
