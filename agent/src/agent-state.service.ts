@@ -7,7 +7,7 @@ export enum AgentState {
 }
 export class AgentStateService {
   private _state: AgentState;
-  private _twoFAConfirmed: boolean;
+  private _twoFAConfirmedForProposal: boolean;
   private _proposalWaitingForTwoFASubmissionDateTime: number;
   private _proposalWaitingForTwoFA: ProposalTx;
   public get state() {
@@ -29,7 +29,7 @@ export class AgentStateService {
   }
 
   public addForTwoFAConfirmation(proposalWaitingForTwoFA: ProposalTx): void {
-    this._twoFAConfirmed = false;
+    this._twoFAConfirmedForProposal = false;
     this._proposalWaitingForTwoFASubmissionDateTime = Date.now();
     this._proposalWaitingForTwoFA = proposalWaitingForTwoFA;
   }
