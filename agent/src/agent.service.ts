@@ -88,39 +88,42 @@ export class AgentService {
       this._agentStateService.state = AgentState.PROCESSING;
       const operations = AgentConfiguration.getTxsToOperate();
       const multisigs = AgentConfiguration.getMultisigs();
-      const proposalTxs = await this.getLatestProposalTransactions(multisigs);
-      const txsToExecute: Record<
-        string,
-        { multisigs: Multisig[]; proposalTxs: MultisigTransaction[] }
-      > = {};
-      operations.forEach((op) => {
-        if (!txsToExecute[op])
-          txsToExecute[op] = { multisigs: [], proposalTxs: [] };
-
-        txsToExecute[op].multisigs = proposalTxs
-          .filter((pt) => pt.proposalTxName == op)
-          .map((pt) => pt.multisig);
-        txsToExecute[op].proposalTxs = proposalTxs
-          .filter((pt) => pt.proposalTxName == op)
-          .map((pt) => pt.proposalTx);
-      });
+      const txsToExecute = await this.getLatestProposalTransactions(
+        operations,
+        multisigs,
+      );
       const proposalToExecute = this.getProposalToExecute(txsToExecute);
       if (!proposalToExecute) {
         console.log('No proposal to execute');
         this._agentStateService.state = AgentState.IDLE;
-        return;
-      }
-      const { proposalTx, status } =
-        await this.evalProposalExecution(proposalToExecute);
-      if (status == 'ready-to-execute') {
-        //Execute
-      } else if (status == 'two-fa-required') {
-        this._agentStateService.addForTwoFAConfirmation(proposalTx);
-        this._agentStateService.state = AgentState.WAITING_FOR_TWO_FA;
       } else {
-        this._agentStateService.state = AgentState.IDLE;
+        const { proposalTx, status } =
+          await this.evalProposalExecution(proposalToExecute);
+        if (status == 'ready-to-execute') {
+          this._agentStateService.addProposalToExecute(proposalTx);
+          this._agentStateService.state = AgentState.EXECUTING;
+          await this.executeProposal(proposalTx);
+        } else if (status == 'two-fa-required') {
+          this._agentStateService.addForTwoFAConfirmation(proposalTx);
+          this._agentStateService.state = AgentState.WAITING_FOR_TWO_FA;
+        } else {
+          this._agentStateService.state = AgentState.IDLE;
+        }
       }
     } else if (agentState == AgentState.WAITING_FOR_TWO_FA) {
+      const proposalTx = this._agentStateService.getProposalWaitingForTwoFA();
+      if (proposalTx) {
+        this._agentStateService.addProposalToExecute(proposalTx);
+        this._agentStateService.state = AgentState.EXECUTING;
+        await this.executeProposal(proposalTx);
+      } else if (!this._agentStateService.isThereAProposalWaitingForTwoFA()) {
+        this._agentStateService.state = AgentState.IDLE;
+      }
+    } else if (agentState == AgentState.EXECUTING) {
+      const proposalTx = this._agentStateService.getProposalToExecute();
+      if (proposalTx) {
+        await this.executeProposal(proposalTx);
+      } else this._agentStateService.state = AgentState.IDLE;
     }
   }
 
@@ -223,7 +226,10 @@ export class AgentService {
     return { readyToReplicate, waitingForChainIds };
   }
 
-  private async getLatestProposalTransactions(multisigs: Multisig[]) {
+  private async getLatestProposalTransactions(
+    operations: string[],
+    multisigs: Multisig[],
+  ) {
     const proposalTxs: {
       multisig: Multisig;
       proposalTxName: string;
@@ -242,10 +248,25 @@ export class AgentService {
         }
       }
     }
-    return proposalTxs;
+    const txsToExecute: Record<
+      string,
+      { multisigs: Multisig[]; proposalTxs: MultisigTransaction[] }
+    > = {};
+    operations.forEach((op) => {
+      if (!txsToExecute[op])
+        txsToExecute[op] = { multisigs: [], proposalTxs: [] };
+
+      txsToExecute[op].multisigs = proposalTxs
+        .filter((pt) => pt.proposalTxName == op)
+        .map((pt) => pt.multisig);
+      txsToExecute[op].proposalTxs = proposalTxs
+        .filter((pt) => pt.proposalTxName == op)
+        .map((pt) => pt.proposalTx);
+    });
+    return txsToExecute;
   }
 
-  public async getLatestProposalTransaction(multisig: Multisig) {
+  private async getLatestProposalTransaction(multisig: Multisig) {
     const txproposal =
       await this._safeAgentService.getLatestProposalTransaction({
         multisig: multisig.address,
@@ -254,4 +275,6 @@ export class AgentService {
       });
     return txproposal;
   }
+
+  private async executeProposal(proposalTx: ProposalTx) {}
 }
