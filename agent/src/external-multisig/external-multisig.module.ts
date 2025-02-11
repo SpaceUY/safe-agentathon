@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
-import { SafeMultisigService } from './safe-multisig.service';
+import {
+  SafeMultisigService,
+  MultisigTransaction,
+} from './safe-multisig.service';
 
 @Module({
   imports: [],
@@ -7,3 +10,4 @@ import { SafeMultisigService } from './safe-multisig.service';
   providers: [SafeMultisigService],
 })
 export class ExternalMultisigModule {}
+export { SafeMultisigService, MultisigTransaction };

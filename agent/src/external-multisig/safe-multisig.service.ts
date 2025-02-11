@@ -3,6 +3,8 @@ import Safe from '@safe-global/protocol-kit';
 import { SafeMultisigTransactionResponse } from '@safe-global/types-kit';
 import SafeApiKit from '@safe-global/api-kit';
 
+export type MultisigTransaction = SafeMultisigTransactionResponse;
+
 @Injectable()
 export class SafeMultisigService {
   public async getSafe(params: {
@@ -20,7 +22,7 @@ export class SafeMultisigService {
     multisig: string;
     chainId: string;
     rpcUrl: string;
-  }): Promise<SafeMultisigTransactionResponse | undefined> {
+  }): Promise<MultisigTransaction | undefined> {
     const { multisig, chainId } = params;
     const apiKit = new SafeApiKit({
       chainId: BigInt(chainId),
@@ -28,4 +30,11 @@ export class SafeMultisigService {
     const pendingTransactions = await apiKit.getPendingTransactions(multisig);
     if (pendingTransactions.count > 0) return pendingTransactions.results[0];
   }
+
+  public async confirmProposedTransaction(params: {
+    multisig: string;
+    chainId: string;
+    rpcUrl: string;
+    proposedTx: MultisigTransaction;
+  }) {}
 }
