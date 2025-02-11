@@ -195,7 +195,9 @@ export class AgentService {
     }
     return {
       proposalTx: proposalTx,
-      status: txToOperate.twoFA ? 'two-fa-required' : 'ready-to-execute',
+      status: txToOperate.twoFArequired
+        ? 'two-fa-required'
+        : 'ready-to-execute',
     };
   }
 
