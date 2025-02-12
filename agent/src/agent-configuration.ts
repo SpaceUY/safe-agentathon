@@ -1,7 +1,14 @@
-import * as rawAgentConfig from './agent-config.json';
+import { env } from './_common/config/config';
+const rawAgentConfig = require('./_common/config/' + env.CONFIG_FILE + '.js');
 
 export class AgentConfiguration {
-  private static getConfig = () => rawAgentConfig as Configuration;
+  private static getConfig = () => {
+    return rawAgentConfig.default as Configuration;
+  };
+
+  public static getAgentId(): string {
+    return AgentConfiguration.getConfig().id;
+  }
 
   public static isProposalListener(): boolean {
     return this.getConfig().autonomousProposalListener;
@@ -74,6 +81,7 @@ export enum AgentInteractions {
 }
 
 export interface Configuration {
+  id: string;
   isMultisigExecutor: boolean;
   autonomousProposalListener: boolean;
   totp: string;
