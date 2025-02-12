@@ -22,7 +22,7 @@ export class AgentConfiguration {
 
     const operations = Object.keys(AgentConfiguration.getConfig().txsToOperate);
     operations.forEach((op) => {
-      if (AgentConfiguration.getConfig().txsToOperate[op].twoFArequired) {
+      if (AgentConfiguration.getConfig().txsToOperate[op].twoFARequired) {
         interactions.push(AgentInteractions.PUSH_TWO_FACTOR);
         return;
       }
@@ -42,6 +42,10 @@ export class AgentConfiguration {
 
   public static holdToCheck(key: string): boolean {
     return AgentConfiguration.getTxToOperate(key).holdToCheck;
+  }
+
+  public static isMultisigExecutor(): boolean {
+    return AgentConfiguration.getConfig().isMultisigExecutor;
   }
 
   public static holdToReplicate(key: string): boolean {
@@ -70,7 +74,7 @@ export enum AgentInteractions {
 }
 
 export interface Configuration {
-  isPayer: boolean;
+  isMultisigExecutor: boolean;
   autonomousProposalListener: boolean;
   totp: string;
   multisigs: Multisig[];
@@ -91,7 +95,7 @@ interface TxsToOperate {
 export interface TxToOperate {
   checks: AgentChecks[];
   chainIds: string[];
-  twoFArequired: boolean;
+  twoFARequired: boolean;
   holdToCheck: boolean;
   holdToReplicate: boolean;
 }

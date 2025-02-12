@@ -7,15 +7,21 @@ import {
 
 @Injectable()
 export class AgentMemoryStateService implements IAgentStateService {
+  private _proposalEvaluationPool: Record<
+    string,
+    { twoFAapproved: boolean; checksPassed: boolean }
+  >;
   private readonly PROPOSAL_WAITING_FOR_TWO_FA_EXPIRATION_TIME_IN_SECONDS =
     60 * 5 * 1000;
-  private readonly PROPOSAL_TO_EXECUTE_MAX_ATTEMPTS = 10;
+  private readonly PROPOSAL_TO_EXECUTE_EXPIRATION_TIME_IN_SECONDS =
+    60 * 5 * 1000;
   private _state: AgentState;
   private _twoFAConfirmedForProposal: boolean;
   private _proposalWaitingForTwoFASubmissionDateTime: number;
   private _proposalWaitingForTwoFA: ProposalTxs | undefined;
-  private _proposal: ProposalTxs | undefined;
-  private _proposalAttempts: number = 0;
+  private _proposalReadyToExecute: ProposalTxs | undefined;
+  private _proposalReadyToExecuteSubmissionDateTime: number;
+
   public get state() {
     return this._state;
   }
@@ -23,7 +29,44 @@ export class AgentMemoryStateService implements IAgentStateService {
     this._state = state;
   }
 
-  public addForTwoFAConfirmation(proposalWaitingForTwoFA: ProposalTxs): void {
+  public registerIntoProposalEvaluationPool(
+    proposalIdentificator: string,
+    config?:
+      | {
+          twoFAapproved?: boolean | undefined;
+          checksPassed?: boolean | undefined;
+        }
+      | undefined,
+  ): { twoFAapproved: boolean; checksPassed: boolean } {
+    if (!this._proposalEvaluationPool[proposalIdentificator]) {
+      this._proposalEvaluationPool[proposalIdentificator] = {
+        twoFAapproved: false,
+        checksPassed: false,
+      };
+    }
+
+    if (config?.twoFAapproved != undefined) {
+      this._proposalEvaluationPool[proposalIdentificator].twoFAapproved =
+        config.twoFAapproved;
+    }
+
+    if (config?.checksPassed != undefined) {
+      this._proposalEvaluationPool[proposalIdentificator].checksPassed =
+        config.checksPassed;
+    }
+
+    return this._proposalEvaluationPool[proposalIdentificator];
+  }
+
+  public getFromProposalEvaluationPool(
+    proposalIdentificator: string,
+  ): { twoFAapproved: boolean; checksPassed: boolean } | undefined {
+    return this._proposalEvaluationPool[proposalIdentificator] ?? undefined;
+  }
+
+  public addProposalForTwoFAConfirmation(
+    proposalWaitingForTwoFA: ProposalTxs,
+  ): void {
     this._twoFAConfirmedForProposal = false;
     this._proposalWaitingForTwoFASubmissionDateTime = Date.now();
     this._proposalWaitingForTwoFA = proposalWaitingForTwoFA;
@@ -58,14 +101,19 @@ export class AgentMemoryStateService implements IAgentStateService {
     this._twoFAConfirmedForProposal = true;
   }
 
-  public addProposal(proposal: ProposalTxs): void {
-    this._proposal = proposal;
-    this._proposalAttempts = this.PROPOSAL_TO_EXECUTE_MAX_ATTEMPTS;
+  public addProposalReadyToExecute(proposal: ProposalTxs): void {
+    this._proposalReadyToExecute = proposal;
+    this._proposalReadyToExecuteSubmissionDateTime = 0;
   }
 
-  public getProposal(): ProposalTxs | undefined {
-    this._proposalAttempts--;
-    if (this._proposalAttempts <= 0) this._proposal = undefined;
-    return this._proposal;
+  public getProposalReadyToExecute(): ProposalTxs | undefined {
+    const proposal =
+      this._proposalReadyToExecuteSubmissionDateTime +
+        this.PROPOSAL_TO_EXECUTE_EXPIRATION_TIME_IN_SECONDS <
+      Date.now()
+        ? this._proposalReadyToExecute
+        : undefined;
+
+    return proposal;
   }
 }
