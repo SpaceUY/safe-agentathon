@@ -6,9 +6,9 @@ import { IAgentSignerService } from './agent-signer.service.interface';
   imports: [],
   controllers: [],
   providers: [
-    { provide: 'IAgentSignerService', useClass: AgentLocalSignerService },
+    { provide: 'AgentLocalSignerService', useClass: AgentLocalSignerService },
   ],
-  exports: ['IAgentSignerService'],
+  exports: ['AgentLocalSignerService'],
 })
 export class AgentSignerModule {}
 export { IAgentSignerService };

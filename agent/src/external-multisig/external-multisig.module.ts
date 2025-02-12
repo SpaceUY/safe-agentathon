@@ -8,6 +8,7 @@ import {
   imports: [],
   controllers: [],
   providers: [SafeMultisigService],
+  exports: [SafeMultisigService],
 })
 export class ExternalMultisigModule {}
-export { SafeMultisigService, MultisigTransaction };
+export { MultisigTransaction, SafeMultisigService };

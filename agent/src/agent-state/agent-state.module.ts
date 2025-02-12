@@ -7,9 +7,9 @@ import { IAgentStateService } from './agent-state.service.interface';
   imports: [],
   controllers: [],
   providers: [
-    { provide: 'IAgentStateService', useClass: AgentMemoryStateService },
+    { provide: 'AgentMemoryStateService', useClass: AgentMemoryStateService },
   ],
-  exports: ['IAgentStateService'],
+  exports: ['AgentMemoryStateService'],
 })
 export class AgentStateModule {}
 export { IAgentStateService };
