@@ -9,6 +9,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AgentSignerModule } from './agent-signer/agent-signer.module';
 import { AgentStateModule } from './agent-state/agent-state.module';
 import { AgentMemoryStateService } from './agent-state/agent-memory-state.service';
+import { ExternalMessagingModule } from './external-messaging/external-messaging.module';
 
 const agentCheckModule = AgentChecksModule.register();
 const agentInteractionsModule = AgentInteractionsModule.register();
@@ -21,6 +22,7 @@ const agentInteractionsModule = AgentInteractionsModule.register();
     ScheduleModule.forRoot(),
     AgentSignerModule,
     AgentStateModule,
+    ExternalMessagingModule,
   ],
   controllers: [AgentController],
   providers: [
