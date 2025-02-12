@@ -9,10 +9,22 @@ export enum AgentState {
 export interface IAgentStateService {
   get state(): AgentState;
   set state(value: AgentState);
-  addForTwoFAConfirmation(proposalWaitingForTwoFA: ProposalTxs): void;
+  registerIntoProposalEvaluationPool(
+    proposalIdentificator: string,
+    config?:
+      | {
+          twoFAapproved?: boolean | undefined;
+          checksPassed?: boolean | undefined;
+        }
+      | undefined,
+  ): { twoFAapproved: boolean; checksPassed: boolean };
+  getFromProposalEvaluationPool(
+    proposalIdentificator: string,
+  ): { twoFAapproved: boolean; checksPassed: boolean } | undefined;
+  addProposalForTwoFAConfirmation(proposalWaitingForTwoFA: ProposalTxs): void;
   getProposalWaitingForTwoFA(): ProposalTxs | undefined;
   isThereAProposalWaitingForTwoFA(): boolean;
   confirmTwoFA(): void;
-  addProposal(proposal: ProposalTxs): void;
-  getProposal(): ProposalTxs | undefined;
+  addProposalReadyToExecute(proposal: ProposalTxs): void;
+  getProposalReadyToExecute(): ProposalTxs | undefined;
 }

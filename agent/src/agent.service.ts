@@ -23,6 +23,10 @@ import {
   AgentState,
   IAgentStateService,
 } from './agent-state/agent-state.service.interface';
+import {
+  evalProposalToConfirmOrExecute,
+  getProposalIdentificator,
+} from './_common/helpers/proposalTxs';
 
 @Injectable()
 export class AgentService {
@@ -90,11 +94,11 @@ export class AgentService {
       this._agentStateService.state = AgentState.PROCESSING;
       const operations = AgentConfiguration.getTxsToOperate();
       const multisigs = AgentConfiguration.getMultisigs();
-      const txs = await this.getLatestProposalTransactions(
+      const proposalTransactions = await this.getLatestProposalsTransactions(
         operations,
         multisigs,
       );
-      const proposal = this.getProposal(txs);
+      const proposal = this.getProposalToAttend(proposalTransactions);
       if (!proposal) {
         console.log('No proposal found');
         this._agentStateService.state = AgentState.IDLE;
@@ -102,14 +106,10 @@ export class AgentService {
         const { proposalTxs, status } =
           await this.evalProposalExecution(proposal);
         if (status == 'ready') {
-          this._agentStateService.addProposal(proposalTxs);
+          this._agentStateService.addProposalReadyToExecute(proposalTxs);
           this._agentStateService.state = AgentState.EXECUTING;
-          await this.confirmOrExecuteProposal(
-            proposalTxs,
-            AgentConfiguration.holdToReplicate(proposalTxs.operationName),
-          );
         } else if (status == 'two-fa-required') {
-          this._agentStateService.addForTwoFAConfirmation(proposalTxs);
+          this._agentStateService.addProposalForTwoFAConfirmation(proposalTxs);
           this._agentStateService.state = AgentState.WAITING_FOR_TWO_FA;
         } else {
           this._agentStateService.state = AgentState.IDLE;
@@ -118,17 +118,18 @@ export class AgentService {
     } else if (agentState == AgentState.WAITING_FOR_TWO_FA) {
       const proposalTxs = this._agentStateService.getProposalWaitingForTwoFA();
       if (proposalTxs) {
-        this._agentStateService.addProposal(proposalTxs);
-        this._agentStateService.state = AgentState.EXECUTING;
-        await this.confirmOrExecuteProposal(
-          proposalTxs,
-          AgentConfiguration.holdToReplicate(proposalTxs.operationName),
+        const proposalIdentificator = getProposalIdentificator(proposalTxs);
+        this._agentStateService.registerIntoProposalEvaluationPool(
+          proposalIdentificator,
+          { twoFAapproved: true },
         );
+        this._agentStateService.addProposalReadyToExecute(proposalTxs);
+        this._agentStateService.state = AgentState.EXECUTING;
       } else if (!this._agentStateService.isThereAProposalWaitingForTwoFA()) {
         this._agentStateService.state = AgentState.IDLE;
       }
     } else if (agentState == AgentState.EXECUTING) {
-      const proposalTxs = this._agentStateService.getProposal();
+      const proposalTxs = this._agentStateService.getProposalReadyToExecute();
       if (proposalTxs) {
         await this.confirmOrExecuteProposal(
           proposalTxs,
@@ -138,15 +139,15 @@ export class AgentService {
     }
   }
 
-  private getProposal(
+  private getProposalToAttend(
     txs: Record<string, ProposalTxs>,
   ): ProposalTxs | undefined {
     let proposalsAcrossChain = 0;
     let result;
     Object.keys(txs).forEach((op) => {
-      const proposals = txs[op].proposalTxs.length;
+      const proposals = txs[op].multisigTxs.length;
       if (proposals > proposalsAcrossChain)
-        result = { operationName: op, proposalTxs: txs[op].proposalTxs };
+        result = { operationName: op, proposalTxs: txs[op].multisigTxs };
     });
     return result;
   }
@@ -154,7 +155,6 @@ export class AgentService {
   private async evalProposalExecution(proposalTxs: ProposalTxs): Promise<{
     proposalTxs: ProposalTxs;
     status: 'hold-to-check' | 'checks-not-passed' | 'two-fa-required' | 'ready';
-    holdToReplicate: boolean;
   }> {
     const { operationName } = proposalTxs;
 
@@ -175,37 +175,54 @@ export class AgentService {
         return {
           proposalTxs,
           status: 'hold-to-check',
-          holdToReplicate: txToOperate.holdToReplicate,
         };
       }
     }
 
-    const agentChecks = AgentConfiguration.getAgentChecks();
-    const checks = agentChecks.map((ac) => {
-      return { checkKey: ac, checker: this.resolveChecker(ac) };
-    });
+    const proposalIdentificator = getProposalIdentificator(proposalTxs);
 
-    const checkResult = await Promise.all(
-      checks.map(async (c) => {
+    const { checksPassed, twoFAapproved } =
+      this._agentStateService.registerIntoProposalEvaluationPool(
+        proposalIdentificator,
+      );
+
+    if (!checksPassed) {
+      const agentChecks = AgentConfiguration.getAgentChecks();
+      const checks = agentChecks.map((ac) => {
+        return { checkKey: ac, checker: this.resolveChecker(ac) };
+      });
+
+      const checkResult = await Promise.all(
+        checks.map(async (c) => {
+          return {
+            checkKey: c.checkKey,
+            result: await c.checker.performCheck(proposalTxs),
+          };
+        }),
+      );
+      const checkFails = checkResult.filter((cr) => !cr.result);
+      if (checkFails.length > 0) {
+        checkFails.forEach((cf) =>
+          console.log('Checks dont pass', cf.checkKey),
+        );
         return {
-          checkKey: c.checkKey,
-          result: await c.checker.performCheck(proposalTxs),
+          proposalTxs: proposalTxs,
+          status: 'checks-not-passed',
         };
-      }),
-    );
-    const checkFails = checkResult.filter((cr) => !cr.result);
-    if (checkFails.length > 0) {
-      checkFails.forEach((cf) => console.log('Checks dont pass', cf.checkKey));
-      return {
-        proposalTxs: proposalTxs,
-        status: 'checks-not-passed',
-        holdToReplicate: txToOperate.holdToReplicate,
-      };
+      }
+      this._agentStateService.registerIntoProposalEvaluationPool(
+        proposalIdentificator,
+        { checksPassed: true },
+      );
     }
+
     return {
       proposalTxs: proposalTxs,
-      status: txToOperate.twoFArequired ? 'two-fa-required' : 'ready',
-      holdToReplicate: txToOperate.holdToReplicate,
+      status: txToOperate.twoFARequired
+        ? twoFAapproved
+          ? 'ready'
+          : 'two-fa-required'
+        : 'ready',
     };
   }
 
@@ -231,7 +248,7 @@ export class AgentService {
     return { readyToReplicate, waitingForChainIds };
   }
 
-  private async getLatestProposalTransactions(
+  private async getLatestProposalsTransactions(
     operations: string[],
     multisigs: Multisig[],
   ): Promise<Record<string, ProposalTxs>> {
@@ -257,11 +274,11 @@ export class AgentService {
     const txs: Record<string, ProposalTxs> = {};
     operations.forEach((op) => {
       if (!txs[op])
-        txs[op] = { operationName: op, multisigs: [], proposalTxs: [] };
+        txs[op] = { operationName: op, multisigs: [], multisigTxs: [] };
       txs[op].multisigs = proposalTxs
         .filter((pt) => pt.proposalTxName == op)
         .map((pt) => pt.multisig);
-      txs[op].proposalTxs = proposalTxs
+      txs[op].multisigTxs = proposalTxs
         .filter((pt) => pt.proposalTxName == op)
         .map((pt) => pt.proposalTx);
     });
@@ -284,21 +301,21 @@ export class AgentService {
   ) {
     try {
       const agentSignerAddress = await this._agentSigner.getSignerAddress();
-      const proposalsAlreadyConfirmed = proposalTxs.proposalTxs.filter((pt) => {
-        pt.confirmations?.some((c) => c.owner == agentSignerAddress);
-      });
-      const proposalsNotConfirmed = proposalTxs.proposalTxs.filter((pt) => {
-        !pt.confirmations?.some((c) => c.owner == agentSignerAddress);
-      });
+      const isMultisigExecutor = AgentConfiguration.isMultisigExecutor();
 
-      if (proposalsAlreadyConfirmed.length == proposalTxs.proposalTxs.length) {
+      const { toConfirm, toExecute } = evalProposalToConfirmOrExecute(
+        proposalTxs,
+        agentSignerAddress,
+        isMultisigExecutor,
+      );
+
+      if (toConfirm.length == 0 && proposalTxs.multisigTxs.length) {
         //Execute if payer
       } else {
-        //Have to confirm pendings and execute if not holdToReplicate
-        if (proposalsAlreadyConfirmed.length > 0 && !holdToReplicate) {
-          //Execute if payer
+        if (toExecute.length > 0 && !holdToReplicate) {
+          //Execute
         }
-        if (proposalsNotConfirmed.length > 0) {
+        if (toConfirm.length > 0) {
           //Confirm
         }
       }
