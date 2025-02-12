@@ -11,7 +11,7 @@ export class AgentInteractionPushTwoFAcodeService
   private readonly secret: string = AgentConfiguration.getTotp();
 
   constructor(
-    @Inject('IAgentStateService')
+    @Inject('AgentMemoryStateService')
     private readonly _agentStateService: IAgentStateService,
   ) {}
 
