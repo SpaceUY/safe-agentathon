@@ -4,7 +4,7 @@ import { MultisigTransaction } from 'src/external-multisig/safe-multisig.service
 export interface ProposalTxs {
   operationName: string;
   multisigs: Multisig[];
-  proposalTxs: MultisigTransaction[];
+  multisigTxs: MultisigTransaction[];
 }
 export interface IAgentCheckServiceInterface {
   performCheck(proposalTxs: ProposalTxs): Promise<boolean>;

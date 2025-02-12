@@ -1,5 +1,5 @@
 {
-  "isPayer": true,
+  "isMultisigExecutor": true,
   "autonomousProposalListener": true,
   "totp": "EVMEKJB6LVKDUSC2ORYUGXTCIZETCTS5GZYSGRS5PU5GY3DCENSA",
   "multisigs": [
@@ -21,7 +21,7 @@
         "upgrade-to-same-version-across-chains"
       ],
       "chainIds": ["84532", "11155111"],
-      "twoFArequired": true,
+      "twoFARequired": true,
       "holdToCheck": true,
       "holdToReplicate": true
     }
