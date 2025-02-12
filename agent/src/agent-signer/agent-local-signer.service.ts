@@ -1,4 +1,4 @@
-import { env } from 'src/_common/config';
+import { env } from 'src/_common/config/config';
 import { IAgentSignerService } from './agent-signer.service.interface';
 import { ethers } from 'ethers';
 

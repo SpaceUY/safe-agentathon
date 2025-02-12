@@ -50,6 +50,7 @@ export class AgentService {
       this._schedulerRegistry.addCronJob('proposalListener', job);
     }
     await this._agentSigner.createSigner();
+    console.log('AGENT ID', AgentConfiguration.getAgentId());
     console.log('SIGNER READY', await this._agentSigner.getSignerAddress());
   }
 
