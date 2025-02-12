@@ -1,10 +1,21 @@
-import * as rawAgentConfig from './agent-config.json';
+import { env } from './_common/config/config';
+const rawAgentConfig = require('./_common/config/' + env.CONFIG_FILE + '.js');
 
 export class AgentConfiguration {
-  private static getConfig = () => rawAgentConfig as Configuration;
+  private static getConfig = () => {
+    return rawAgentConfig.default as Configuration;
+  };
+
+  public static getAgentId(): string {
+    return AgentConfiguration.getConfig().id;
+  }
 
   public static isProposalListener(): boolean {
     return this.getConfig().autonomousProposalListener;
+  }
+
+  public static getAgentNotificationTo(): NotificationTo | undefined {
+    return AgentConfiguration.getConfig().notificationTo;
   }
 
   public static getAgentChecks(): AgentChecks[] {
@@ -22,7 +33,7 @@ export class AgentConfiguration {
 
     const operations = Object.keys(AgentConfiguration.getConfig().txsToOperate);
     operations.forEach((op) => {
-      if (AgentConfiguration.getConfig().txsToOperate[op].twoFArequired) {
+      if (AgentConfiguration.getConfig().txsToOperate[op].twoFARequired) {
         interactions.push(AgentInteractions.PUSH_TWO_FACTOR);
         return;
       }
@@ -42,6 +53,10 @@ export class AgentConfiguration {
 
   public static holdToCheck(key: string): boolean {
     return AgentConfiguration.getTxToOperate(key).holdToCheck;
+  }
+
+  public static isMultisigExecutor(): boolean {
+    return AgentConfiguration.getConfig().isMultisigExecutor;
   }
 
   public static holdToReplicate(key: string): boolean {
@@ -70,12 +85,19 @@ export enum AgentInteractions {
 }
 
 export interface Configuration {
-  isPayer: boolean;
+  id: string;
+  notificationTo: NotificationTo | undefined;
+  isMultisigExecutor: boolean;
   autonomousProposalListener: boolean;
   totp: string;
   multisigs: Multisig[];
   txsToOperate: TxsToOperate;
   interactions: AgentInteractions[];
+}
+
+interface NotificationTo {
+  type: 'email';
+  value: string;
 }
 
 export interface Multisig {
@@ -91,7 +113,7 @@ interface TxsToOperate {
 export interface TxToOperate {
   checks: AgentChecks[];
   chainIds: string[];
-  twoFArequired: boolean;
+  twoFARequired: boolean;
   holdToCheck: boolean;
   holdToReplicate: boolean;
 }

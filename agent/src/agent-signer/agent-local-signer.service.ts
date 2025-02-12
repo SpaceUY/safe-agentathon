@@ -1,4 +1,4 @@
-import { env } from 'src/_common/config';
+import { env } from 'src/_common/config/config';
 import { IAgentSignerService } from './agent-signer.service.interface';
 import { ethers } from 'ethers';
 
@@ -11,7 +11,7 @@ export class AgentLocalSignerService implements IAgentSignerService {
     const wallet = new ethers.Wallet(env.AGENT_PRIVATEKEY);
     return wallet.address;
   }
-  signTransaction(): Promise<string> {
-    throw new Error('Method not implemented.');
+  async getSignerKey(): Promise<string> {
+    return env.AGENT_PRIVATEKEY;
   }
 }
