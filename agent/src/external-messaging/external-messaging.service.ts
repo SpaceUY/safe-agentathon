@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as SibApiV3Sdk from 'sib-api-v3-sdk';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -12,7 +11,6 @@ export class ExternalMessagingService {
   constructor(
     @Inject('BREVO_CLIENT')
     private readonly brevoClient: SibApiV3Sdk.TransactionalEmailsApi,
-    private readonly configService: ConfigService,
   ) {
     this.sender = {
       email: env.BREVO_SENDER_EMAIL,
