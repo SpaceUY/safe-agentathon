@@ -1,4 +1,7 @@
-import { ProposalTxs } from 'src/agent-checks/agent-checks.service.interface';
+import {
+  ProposalTx,
+  ProposalTxs,
+} from 'src/agent-checks/agent-checks.service.interface';
 import { MultisigTransaction } from 'src/external-multisig/safe-multisig.service';
 
 export const getProposalIdentificator = (proposalTxs: ProposalTxs) => {
@@ -12,16 +15,17 @@ export const evalProposalToConfirmOrExecute = (
   proposalTxs: ProposalTxs,
   agentSigner: string,
   isAgentMultisigExecutor: boolean,
-): { toConfirm: MultisigTransaction[]; toExecute: MultisigTransaction[] } => {
-  let toConfirm = proposalTxs.multisigTxs.filter((mt) =>
-    mt.confirmations?.some((c) => c.owner != agentSigner),
+): { toConfirm: ProposalTx[]; toExecute: ProposalTx[] } => {
+  let toConfirm = proposalTxs.proposalTxs.filter((ptxs) =>
+    ptxs.multisigTx.confirmations?.some((c) => c.owner != agentSigner),
   );
   let toExecute = !isAgentMultisigExecutor
     ? []
-    : proposalTxs.multisigTxs.filter(
-        (mt) =>
-          mt.confirmations?.some((c) => c.owner == agentSigner) &&
-          mt.confirmationsRequired == mt.confirmations.length,
+    : proposalTxs.proposalTxs.filter(
+        (ptxs) =>
+          ptxs.multisigTx.confirmations?.some((c) => c.owner == agentSigner) &&
+          ptxs.multisigTx.confirmationsRequired ==
+            ptxs.multisigTx.confirmations.length,
       );
 
   return { toConfirm, toExecute };
