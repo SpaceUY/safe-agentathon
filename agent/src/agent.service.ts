@@ -132,10 +132,12 @@ export class AgentService {
     } else if (agentState == AgentState.EXECUTING) {
       const proposalTxs = this._agentStateService.getProposalReadyToExecute();
       if (proposalTxs) {
-        await this.confirmOrExecuteProposal(
+        const executedSucessfully = await this.confirmOrExecuteProposal(
           proposalTxs,
           AgentConfiguration.holdToReplicate(proposalTxs.operationName),
         );
+        if (executedSucessfully)
+          this._agentStateService.state = AgentState.IDLE;
       } else this._agentStateService.state = AgentState.IDLE;
     }
   }
@@ -144,11 +146,10 @@ export class AgentService {
     txs: Record<string, ProposalTxs>,
   ): ProposalTxs | undefined {
     let proposalsAcrossChain = 0;
-    let result;
+    let result: ProposalTxs | undefined;
     Object.keys(txs).forEach((op) => {
       const proposals = txs[op].multisigTxs.length;
-      if (proposals > proposalsAcrossChain)
-        result = { operationName: op, proposalTxs: txs[op].multisigTxs };
+      if (proposals > proposalsAcrossChain) result = txs[op];
     });
     return result;
   }
@@ -254,9 +255,9 @@ export class AgentService {
     multisigs: Multisig[],
   ): Promise<Record<string, ProposalTxs>> {
     const proposalTxs: {
+      operationName: string;
       multisig: Multisig;
-      proposalTxName: string;
-      proposalTx: MultisigTransaction;
+      multisigTx: MultisigTransaction;
     }[] = [];
     for (const multisig of multisigs) {
       const latestsProposalTxs =
@@ -265,9 +266,9 @@ export class AgentService {
         //TODO: We need to consider native transfers
         if (latestsProposalTxs?.dataDecoded?.method) {
           proposalTxs.push({
+            operationName: latestsProposalTxs.dataDecoded?.method,
             multisig,
-            proposalTxName: latestsProposalTxs.dataDecoded?.method,
-            proposalTx: latestsProposalTxs,
+            multisigTx: latestsProposalTxs,
           });
         }
       }
@@ -275,13 +276,19 @@ export class AgentService {
     const txs: Record<string, ProposalTxs> = {};
     operations.forEach((op) => {
       if (!txs[op])
-        txs[op] = { operationName: op, multisigs: [], multisigTxs: [] };
+        txs[op] = {
+          operationName: op,
+          multisigs: [],
+          multisigTxs: [],
+          proposalTxs: [],
+        };
       txs[op].multisigs = proposalTxs
-        .filter((pt) => pt.proposalTxName == op)
+        .filter((pt) => pt.operationName == op)
         .map((pt) => pt.multisig);
       txs[op].multisigTxs = proposalTxs
-        .filter((pt) => pt.proposalTxName == op)
-        .map((pt) => pt.proposalTx);
+        .filter((pt) => pt.operationName == op)
+        .map((pt) => pt.multisigTx);
+      txs[op].proposalTxs = proposalTxs.filter((pt) => pt.operationName == op);
     });
     return txs;
   }
@@ -299,7 +306,7 @@ export class AgentService {
   private async confirmOrExecuteProposal(
     proposalTxs: ProposalTxs,
     holdToReplicate: boolean,
-  ) {
+  ): Promise<boolean> {
     try {
       const agentSignerAddress = await this._agentSigner.getSignerAddress();
       const isMultisigExecutor = AgentConfiguration.isMultisigExecutor();
@@ -310,18 +317,51 @@ export class AgentService {
         isMultisigExecutor,
       );
 
-      if (toConfirm.length == 0 && proposalTxs.multisigTxs.length) {
-        //Execute if payer
-      } else {
-        if (toExecute.length > 0 && !holdToReplicate) {
-          //Execute
-        }
-        if (toConfirm.length > 0) {
-          //Confirm
-        }
+      //Bad practice this will be tackled differently
+      const signerKey = await this._agentSigner.getSignerKey();
+
+      const executions: (() => Promise<void>)[] = [];
+      for (let i = 0; i < toExecute.length; i++) {
+        const multisig = toExecute[i].multisig;
+        const multisigTx = toExecute[i].multisigTx;
+        executions.push(() =>
+          this._safeAgentService.execProposedTransaction({
+            multisig: multisig.address,
+            rpcUrl: multisig.rpcUrl,
+            proposedTx: multisigTx,
+            signerKey,
+          }),
+        );
       }
+
+      const confirmations: (() => Promise<void>)[] = [];
+      for (let i = 0; i < toExecute.length; i++) {
+        const multisig = toExecute[i].multisig;
+        const multisigTx = toExecute[i].multisigTx;
+        confirmations.push(() =>
+          this._safeAgentService.confirmProposedTransaction({
+            multisig: multisig.address,
+            rpcUrl: multisig.rpcUrl,
+            proposedTx: multisigTx,
+            signerKey,
+          }),
+        );
+      }
+      if (toConfirm.length > 0) {
+        await Promise.all(confirmations.map((fn) => fn()));
+      }
+      if (holdToReplicate) {
+        if (toConfirm.length == 0 && toExecute.length > 0) {
+          await Promise.all(executions.map((fn) => fn()));
+        }
+      } else if (toExecute.length > 0) {
+        await Promise.all(executions.map((fn) => fn()));
+      }
+
+      return true;
     } catch (ex) {
       console.log('Error while executing confirmOrExecuteProposal');
+      return false;
     }
   }
 }
