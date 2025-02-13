@@ -11,7 +11,7 @@ export class AgentController {
   @Post()
   postInteract(
     @Query('interaction') interactionKey: string,
-    @Body('params') params: any,
+    @Body() params: any,
   ): Promise<any> {
     return this.appService.performInteraction(interactionKey, params);
   }
