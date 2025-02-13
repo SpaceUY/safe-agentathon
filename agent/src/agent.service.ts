@@ -129,12 +129,16 @@ export class AgentService {
           this._agentStateService.addProposalReadyToExecute(proposalTxs);
           this._agentStateService.state = AgentState.EXECUTING;
         } else if (status == 'two-fa-required') {
-          await this.resolveMessagingService()?.send2FACode(
-            AgentConfiguration.getAgentId(),
-            AgentConfiguration.getAgentNotificationTo()!.value,
-          );
           this._agentStateService.addProposalForTwoFAConfirmation(proposalTxs);
           this._agentStateService.state = AgentState.WAITING_FOR_TWO_FA;
+          safeFireAndForget(() =>
+            Promise.resolve(
+              this.resolveMessagingService()?.send2FACode(
+                AgentConfiguration.getAgentId(),
+                AgentConfiguration.getAgentNotificationTo()!.value,
+              ),
+            ),
+          );
         } else {
           this._agentStateService.state = AgentState.IDLE;
         }
