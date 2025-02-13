@@ -340,6 +340,8 @@ export class AgentService {
         isMultisigExecutor,
       );
 
+      console.log('toConfirm', toConfirm.length, 'toExecute', toExecute.length);
+
       //Bad practice this will be tackled differently
       const signerKey = await this._agentSigner.getSignerKey();
 
@@ -358,9 +360,9 @@ export class AgentService {
       }
 
       const confirmations: (() => Promise<void>)[] = [];
-      for (let i = 0; i < toExecute.length; i++) {
-        const multisig = toExecute[i].multisig;
-        const multisigTx = toExecute[i].multisigTx;
+      for (let i = 0; i < toConfirm.length; i++) {
+        const multisig = toConfirm[i].multisig;
+        const multisigTx = toConfirm[i].multisigTx;
         confirmations.push(() =>
           this._safeAgentService.confirmProposedTransaction({
             multisig: multisig.address,
@@ -371,18 +373,22 @@ export class AgentService {
         );
       }
       if (toConfirm.length > 0) {
+        console.log('Confirming proposals', toConfirm.length);
         await Promise.all(confirmations.map((fn) => fn()));
       }
       if (holdToReplicate) {
         if (toConfirm.length == 0 && toExecute.length > 0) {
+          console.log('Executing proposals', toExecute.length);
           await Promise.all(executions.map((fn) => fn()));
         }
       } else if (toExecute.length > 0) {
+        console.log('Executing proposals', toExecute.length);
         await Promise.all(executions.map((fn) => fn()));
       }
 
       return true;
     } catch (ex) {
+      console.log(ex);
       console.log('Error while executing confirmOrExecuteProposal');
       return false;
     }

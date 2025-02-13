@@ -16,16 +16,19 @@ export const evalProposalToConfirmOrExecute = (
   agentSigner: string,
   isAgentMultisigExecutor: boolean,
 ): { toConfirm: ProposalTx[]; toExecute: ProposalTx[] } => {
-  let toConfirm = proposalTxs.proposalTxs.filter((ptxs) =>
-    ptxs.multisigTx.confirmations?.some((c) => c.owner != agentSigner),
+  let toConfirm = proposalTxs.proposalTxs.filter(
+    (ptxs) =>
+      !ptxs.multisigTx.confirmations?.some((c) => c.owner === agentSigner),
   );
   let toExecute = !isAgentMultisigExecutor
     ? []
     : proposalTxs.proposalTxs.filter(
         (ptxs) =>
-          ptxs.multisigTx.confirmations?.some((c) => c.owner == agentSigner) &&
+          !ptxs.multisigTx.confirmations?.some(
+            (c) => c.owner === agentSigner,
+          ) &&
           ptxs.multisigTx.confirmationsRequired ==
-            ptxs.multisigTx.confirmations.length,
+            ptxs.multisigTx.confirmations?.length,
       );
 
   return { toConfirm, toExecute };

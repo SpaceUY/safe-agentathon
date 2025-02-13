@@ -103,7 +103,7 @@ export class AgentMemoryStateService implements IAgentStateService {
 
   public addProposalReadyToExecute(proposal: ProposalTxs): void {
     this._proposalReadyToExecute = proposal;
-    this._proposalReadyToExecuteSubmissionDateTime = 0;
+    this._proposalReadyToExecuteSubmissionDateTime = Date.now();
   }
 
   public getProposalReadyToExecute(): ProposalTxs | undefined {
