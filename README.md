@@ -1,48 +1,125 @@
-Details regarding how to configure the agent can be found in
-agent/src/\_common/config/agent-config
+# **Agent Configuration & Demo Guide**
 
-FOR DEMO:
+## **Agent Configuration**
 
-Configure the agent1 and agent2 to get twofa in your email.
-agent/src/\_common/config/agent1-config
-agent/src/\_common/config/agent2-config
-Change -> notificationTo: { type: 'email', value: '[YOUR EMAIL]' }
+To configure the agent, refer to:  
+📂 `agent/src/_common/config/agent-config`
 
-Notifications that the 2fa is required is could be sent to SPAM!!
+---
 
-open terminal in /agent
-yarn start:agent1 (Wait until it starts)
+## **Demo Instructions**
 
-open other terminal in /agent
+### **1️⃣ Preparing the Demo**
+
+1. Configure **Agent 1** and **Agent 2** to receive 2FA requests via email:
+
+   - Edit the following configuration files:
+     - `agent/src/_common/config/agent1-config`
+     - `agent/src/_common/config/agent2-config`
+   - Modify the notification settings:
+     ```json
+     notificationTo: { type: "email", value: "[YOUR EMAIL]" }
+     ```
+   - ⚠️ **Important:** 2FA emails may be sent to your **SPAM** folder.
+
+2. **Setting Up Your Authenticator:**
+   - To get a valid 2FA code when prompted, configure your **Google Authenticator** (or similar) with the **TOTP secret** found in:
+     - `agent1-config -> totp`
+     - `agent2-config -> totp`
+   - 🔑 **Both agents share the same TOTP secret for this demo.**
+
+---
+
+### **2️⃣ Running the Demo**
+
+#### **Step 1: Start Agent 1**
+
+```sh
+cd agent
+yarn start:agent1
+```
+
+🕐 **Wait until it starts.**
+
+#### **Step 2: Start Agent 2**
+
+Open another terminal and run:
+
+```sh
+cd agent
 yarn start:agent2
+```
 
-(Both agents will log No proposals found)
+✅ Both agents will log:
 
-open other terminal in /onchain
+```
+No proposals found
+```
 
-    npx hardhat test test/BoxUpgradeability.ts --network base_testnet
+#### **Step 3: Start On-Chain Tests**
 
-    (Both agents will log they are waiting for a proposal in sepolia)
+Open another terminal and navigate to `/onchain`:
 
-    npx hardhat test test/BoxUpgradeability.ts --network sepolia_testnet
+```sh
+cd onchain
+```
 
-    (Both will log that upgrade checks have passed)
+Run the following command for **Base Testnet**:
 
-    (Both will start asking for two fa)
+```sh
+npx hardhat test test/BoxUpgradeability.ts --network base_testnet
+```
 
-open postman and send codes to the respectives agents
+📌 Agents will log:
 
-Agents will complete their job by confirming the txs
-and the agent 1 because is executor and has funds to pay will execute the transaction
-to complete the upgrade
+```
+Waiting for a proposal on Sepolia
+```
 
-WANT MORE?
+Then, run the command for **Sepolia Testnet**:
 
-If you want to test a transfer proposal:
--go to /onchain/test/BoxUpgradeability.ts
--skip the following test -> it.skip("Propose upgrade with proposer")
--unskip the following test -> it("Propose transfer with proposer")
+```sh
+npx hardhat test test/BoxUpgradeability.ts --network sepolia_testnet
+```
 
-And proceed by doing exactly the same.
-Consider that we have fund the multisig with some ethers and if is empty this tx wont work.
-We are not performing any check!
+📌 Agents will log:
+
+```
+Upgrade checks passed
+```
+
+📌 Agents will now **request 2FA approval**.
+
+#### **Step 4: Approve 2FA via Postman**
+
+- Open **Postman** (or any API client).
+- Send the **2FA codes** to the corresponding agents.
+
+🔹 Once approved, the agents will:
+
+- **Confirm transactions** ✅
+- **Execute the upgrade** (Agent 1 handles execution & pays for gas) 🔥
+
+---
+
+## **3️⃣ Extra: Testing a Transfer Proposal**
+
+If you want to test a **transfer proposal** instead of an upgrade:
+
+1. Open the test file:  
+   📂 `/onchain/test/BoxUpgradeability.ts`
+2. Modify the test suite:
+   - **Skip** the upgrade test:
+     ```ts
+     it.skip("Propose upgrade with proposer");
+     ```
+   - **Unskip** the transfer test:
+     ```ts
+     it("Propose transfer with proposer");
+     ```
+3. Run the demo following the same steps as before.
+
+⚠️ **Note:** The multisig **must have at least 1 wei** for the transfer to succeed.  
+👉 **No balance checks are performed!**
+
+---

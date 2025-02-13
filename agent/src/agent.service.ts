@@ -351,7 +351,7 @@ export class AgentService {
       );
 
       this._logger.info(
-        'toConfirm ' + toConfirm.length + '| toExecute' + toExecute.length,
+        `To confirm ${toConfirm.length} | To execute ${toExecute.length}`,
       );
 
       //Bad practice this will be tackled differently
