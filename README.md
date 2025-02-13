@@ -9,6 +9,8 @@ To configure the agent, refer to:
 
 ## **Demo Instructions**
 
+⚠️ Sensitive information was shared for anyone to easily execute this repo
+
 ### **1️⃣ Preparing the Demo**
 
 1. Configure **Agent 1** and **Agent 2** to receive 2FA requests via email:
