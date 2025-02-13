@@ -386,16 +386,16 @@ export class AgentService {
         );
       }
       if (toConfirm.length > 0) {
-        this._logger.info('Confirming proposals' + toConfirm.length);
+        this._logger.info('Confirming proposals ' + toConfirm.length);
         await Promise.all(confirmations.map((fn) => fn()));
       }
       if (holdToReplicate) {
         if (toConfirm.length == 0 && toExecute.length > 0) {
-          this._logger.info('Executing proposals' + toExecute.length);
+          this._logger.info('Executing proposals ' + toExecute.length);
           await Promise.all(executions.map((fn) => fn()));
         }
       } else if (toExecute.length > 0) {
-        this._logger.info('Executing proposals' + toExecute.length);
+        this._logger.info('Executing proposals ' + toExecute.length);
         await Promise.all(executions.map((fn) => fn()));
       }
 
