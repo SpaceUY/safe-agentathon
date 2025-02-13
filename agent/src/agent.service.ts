@@ -367,6 +367,7 @@ export class AgentService {
           this._safeAgentService.confirmProposedTransaction({
             multisig: multisig.address,
             rpcUrl: multisig.rpcUrl,
+            chainId: multisig.chainId,
             proposedTx: multisigTx,
             signerKey,
           }),
@@ -388,7 +389,6 @@ export class AgentService {
 
       return true;
     } catch (ex) {
-      console.log(ex);
       console.log('Error while executing confirmOrExecuteProposal');
       return false;
     }
