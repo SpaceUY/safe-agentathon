@@ -84,9 +84,12 @@ export class AgentService {
   private resolveMessagingService(): IAgentMessagingService | undefined {
     let messagingService: IAgentMessagingService | undefined;
     try {
-      messagingService =
-        this._moduleRef.get<IAgentMessagingService>('MessagingService');
-    } catch (ex) {}
+      messagingService = this._moduleRef.get<IAgentMessagingService>(
+        'AgentMessagingService',
+      );
+    } catch (ex) {
+      console.log(ex);
+    }
     return messagingService;
   }
 
@@ -114,8 +117,10 @@ export class AgentService {
         console.log('No proposal found');
         this._agentStateService.state = AgentState.IDLE;
       } else {
+        console.log('Proposal found');
         const { proposalTxs, status } =
           await this.evalProposalExecution(proposal);
+        console.log('Proposal found evaluated with status', status);
         if (status == 'ready') {
           this._agentStateService.addProposalReadyToExecute(proposalTxs);
           this._agentStateService.state = AgentState.EXECUTING;
@@ -131,6 +136,7 @@ export class AgentService {
         }
       }
     } else if (agentState == AgentState.WAITING_FOR_TWO_FA) {
+      console.log('Waiting for two fa');
       const proposalTxs = this._agentStateService.getProposalWaitingForTwoFA();
       if (proposalTxs) {
         const proposalIdentificator = getProposalIdentificator(proposalTxs);
@@ -144,6 +150,7 @@ export class AgentService {
         this._agentStateService.state = AgentState.IDLE;
       }
     } else if (agentState == AgentState.EXECUTING) {
+      console.log('Executing');
       const proposalTxs = this._agentStateService.getProposalReadyToExecute();
       if (proposalTxs) {
         const executedSucessfully = await this.confirmOrExecuteProposal(
@@ -231,6 +238,8 @@ export class AgentService {
         { checksPassed: true },
       );
     }
+
+    console.log('Checks passed');
 
     return {
       proposalTxs: proposalTxs,

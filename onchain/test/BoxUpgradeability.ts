@@ -37,25 +37,44 @@ describe("BoxUpgradeability", function () {
     const box = boxImpl.attach(await boxProxy.getAddress());
     return box as BoxV2;
   }
-  async function deploySafe(): Promise<void> {}
+  async function getContractsToProposeUpgrade() {
+    const isLocal =
+      hre.network.name == "hardhat" || hre.network.name == "localhost";
+    if (isLocal) {
+      throw new Error(
+        "Safe and localnet requieres a multisend contract making thing more complex"
+      );
+    }
+    const rpcUrl = (hre.config.networks[hre.network.name] as any).url;
+    const multisig = process.env.MULTISIG!;
+    const boxProxy = await getBoxProxyV1(multisig);
+    const boxProxyAddress = await boxProxy.getAddress();
+    const boxV2DeployedAddress = await getBoxV2DeployedAddress();
+
+    const apiKit = new SafeApiKit({
+      chainId: BigInt(hre.network.config.chainId!),
+    });
+
+    return {
+      boxProxy,
+      boxProxyAddress,
+      boxV2DeployedAddress,
+      multisig,
+      rpcUrl,
+      apiKit,
+    };
+  }
 
   describe("Deployment", function () {
     it.skip("Should upgrade successfully", async function () {
-      const isLocal =
-        hre.network.name == "hardhat" || hre.network.name == "localhost";
-      if (isLocal) {
-        throw new Error(
-          "Safe and localnet requieres a multisend contract making thing more complex"
-        );
-      }
-      const rpcUrl = (hre.config.networks[hre.network.name] as any).url;
-      const multisig = process.env.MULTISIG!;
-      const boxProxy = await getBoxProxyV1(multisig);
-      const boxProxyAddress = await boxProxy.getAddress();
-      const boxV2DeployedAddress = await getBoxV2DeployedAddress();
-      const apiKit = new SafeApiKit({
-        chainId: BigInt(hre.network.config.chainId!),
-      });
+      const {
+        boxProxy,
+        boxProxyAddress,
+        boxV2DeployedAddress,
+        multisig,
+        rpcUrl,
+        apiKit,
+      } = await getContractsToProposeUpgrade();
       //--PROPOSE
       const safeWalletForSecondary: Safe = await Safe.init({
         provider: rpcUrl,
@@ -108,7 +127,7 @@ describe("BoxUpgradeability", function () {
     // });
 
     //https://help.safe.global/en/articles/235770-proposers
-    it.skip("Propose tx with proposer", async function () {
+    it.skip("Propose transfer with proposer", async function () {
       const multisig = process.env.MULTISIG!;
       const rpcUrl = (hre.config.networks[hre.network.name] as any).url;
       //0x02ac83F5c6Af46FF26a3E2F8AFF82C62B6286d47
@@ -134,6 +153,50 @@ describe("BoxUpgradeability", function () {
       const apiKit = new SafeApiKit({
         chainId: BigInt(hre.network.config.chainId!),
       });
+      const signature = await safeWallet.signHash(safeTxHash);
+      await apiKit.proposeTransaction({
+        safeAddress: multisig,
+        safeTransactionData: safeTx.data,
+        safeTxHash,
+        senderSignature: signature.data,
+        senderAddress: proposerWallet.address,
+      });
+
+      console.log("Transaction proposed with hash:", safeTxHash);
+    });
+
+    it("Propose upgrade with proposer", async function () {
+      const {
+        boxProxy,
+        boxProxyAddress,
+        boxV2DeployedAddress,
+        multisig,
+        rpcUrl,
+        apiKit,
+      } = await getContractsToProposeUpgrade();
+      //0x02ac83F5c6Af46FF26a3E2F8AFF82C62B6286d47
+      const proposerWallet = new hre.ethers.Wallet(
+        "0x242ab6f7c55750585d8dcf953ab6ee4ab7f08ca87551a4a20571c25ec949df81",
+        new hre.ethers.JsonRpcProvider(rpcUrl)
+      );
+      const safeWallet: Safe = await Safe.init({
+        provider: rpcUrl,
+        safeAddress: multisig,
+        signer: proposerWallet.privateKey,
+      });
+      const tx = await boxProxy
+        .getFunction("upgradeToAndCall")
+        .populateTransaction(boxV2DeployedAddress, "0x");
+      const safeTx = await safeWallet.createTransaction({
+        transactions: [
+          {
+            to: boxProxyAddress,
+            data: tx.data,
+            value: "0",
+          },
+        ],
+      });
+      const safeTxHash = await safeWallet.getTransactionHash(safeTx);
       const signature = await safeWallet.signHash(safeTxHash);
       await apiKit.proposeTransaction({
         safeAddress: multisig,

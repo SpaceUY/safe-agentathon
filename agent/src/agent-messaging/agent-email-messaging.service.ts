@@ -32,15 +32,20 @@ export class AgentEmailMessagingService implements IAgentMessagingService {
   }
 
   public async send2FACode(from: string, to: string) {
-    const subject = '🚀 SafeRocket | 2FA Code Request Pending';
-    const html = this.loadHtmlTemplate('2fa-email');
+    try {
+      console.log(`Sending email from: ${from} to ${to}`);
+      const subject = '🚀 SafeRocket | 2FA Code Request Pending';
+      const html = this.loadHtmlTemplate('2fa-email');
 
-    return this.sendMessage(from, to, subject, html);
+      return this.sendMessage(from, to, subject, html);
+    } catch (ex) {
+      console.log(ex);
+    }
   }
 
   private loadHtmlTemplate(templateName: string): string {
     const filePath = path.resolve(
-      'src/notifications/templates',
+      './src/agent-messaging/templates',
       `${templateName}.html`,
     );
     return fs.readFileSync(filePath, 'utf-8');
