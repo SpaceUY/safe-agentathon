@@ -195,7 +195,7 @@ export class AgentService {
       );
       if (!readyToCheck) {
         this._logger.info(
-          `${operationName} is not ready to replicate. Waiting for:[${waitingForChainIds.join(',')}]`,
+          `${operationName} is not ready to check. Waiting for:[${waitingForChainIds.join(',')}]`,
         );
         return {
           proposalTxs,
