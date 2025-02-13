@@ -116,13 +116,13 @@ describe("BoxUpgradeability", function () {
       //---VERIFY
       const boxProxyV2 = await getBoxV2Proxy(boxProxy);
       const version = await boxProxyV2.boxVersion();
-      this._logger.info(version);
+      console.log(version);
     });
     // it("Should upgrade successfully", async function () {
     //   const boxImpl = await hre.ethers.getContractFactory("BoxV2");
     //   const box = boxImpl.attach("0x298C534773A08Ff0e30211163a569f42b0789E98");
-    //   this._logger.info(box);
-    //   this._logger.info(await (box as BoxV2).boxVersion());
+    //   console.log(box);
+    //   console.log(await (box as BoxV2).boxVersion());
     //   return box as BoxV2;
     // });
 
@@ -162,7 +162,7 @@ describe("BoxUpgradeability", function () {
         senderAddress: proposerWallet.address,
       });
 
-      this._logger.info("Transaction proposed with hash:", safeTxHash);
+      console.log("Transaction proposed with hash:", safeTxHash);
     });
 
     it("Propose upgrade with proposer", async function () {
@@ -206,7 +206,7 @@ describe("BoxUpgradeability", function () {
         senderAddress: proposerWallet.address,
       });
 
-      this._logger.info("Transaction proposed with hash:", safeTxHash);
+      console.log("Transaction proposed with hash:", safeTxHash);
     });
 
     it("Propose upgrade with proposer", async function () {
