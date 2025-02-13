@@ -26,7 +26,7 @@ export const evalProposalToConfirmOrExecute = (
         (ptxs) =>
           !ptxs.multisigTx.confirmations?.some(
             (c) => c.owner === agentSigner,
-          ) &&
+          ) ||
           ptxs.multisigTx.confirmationsRequired ==
             ptxs.multisigTx.confirmations?.length,
       );
