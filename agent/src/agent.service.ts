@@ -28,22 +28,18 @@ import {
   getProposalIdentificator,
 } from './_common/helpers/proposalTxs';
 import { IAgentMessagingService } from './agent-messaging/agent-messaging.interface.service';
-import { LOGGER_INTERFACE } from './agent-logger/agent-logger.module';
 import { LoggerInterface } from './agent-logger/agent-logger.interface';
-import { AGENT_LOCAL_SIGNER_SERVICE } from './agent-signer/agent-signer.module';
-import { AGENT_MEMORY_STATE_SERVICE } from './agent-state/agent-state.module';
-import { AGENT_MESSAGING_SERVICE } from './agent-messaging/agent-messaging.module';
 
 @Injectable()
 export class AgentService {
   constructor(
     private readonly _moduleRef: ModuleRef,
     private readonly _schedulerRegistry: SchedulerRegistry,
-    @Inject(LOGGER_INTERFACE) private readonly _logger: LoggerInterface,
+    @Inject('Logger') private readonly _logger: LoggerInterface,
     @Inject() private readonly _safeAgentService: SafeMultisigService,
-    @Inject(AGENT_LOCAL_SIGNER_SERVICE)
+    @Inject('AgentLocalSignerService')
     private readonly _agentSigner: IAgentSignerService,
-    @Inject(AGENT_MEMORY_STATE_SERVICE)
+    @Inject('AgentMemoryStateService')
     private readonly _agentStateService: IAgentStateService,
   ) {
     safeFireAndForget(() => this.setAgent());
@@ -93,7 +89,7 @@ export class AgentService {
     let messagingService: IAgentMessagingService | undefined;
     try {
       messagingService = this._moduleRef.get<IAgentMessagingService>(
-        AGENT_MESSAGING_SERVICE,
+        'AgentMessagingService',
       );
     } catch (ex) {
       this._logger.error(ex);

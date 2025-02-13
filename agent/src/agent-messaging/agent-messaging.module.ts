@@ -11,8 +11,6 @@ import { env } from 'src/_common/config/config';
 import { AgentConfiguration } from 'src/agent-configuration';
 import { LoggerModule } from 'src/agent-logger/agent-logger.module';
 
-export const BREVO_CLIENT = 'BREVO_CLIENT';
-export const AGENT_MESSAGING_SERVICE = 'AgentMessagingService';
 @Module({})
 export class AgentMessagingModule {
   static register(): DynamicModule {
@@ -32,19 +30,19 @@ export class AgentMessagingModule {
     if (notificationTo) {
       if (notificationTo.type == 'email') {
         providers.push({
-          provide: BREVO_CLIENT,
+          provide: 'BrevoClient',
           useFactory: () => {
             const defaultClient = SibApiV3Sdk.ApiClient.instance;
             defaultClient.authentications['api-key'].apiKey = env.BREVO_API_KEY;
             return new SibApiV3Sdk.TransactionalEmailsApi();
           },
         });
-        exports.push(BREVO_CLIENT);
+        exports.push('BrevoClient');
         providers.push({
-          provide: AGENT_MESSAGING_SERVICE,
+          provide: 'AgentMessagingService',
           useClass: AgentEmailMessagingService,
         });
-        exports.push(AGENT_MESSAGING_SERVICE);
+        exports.push('AgentMessagingService');
       }
     }
 
