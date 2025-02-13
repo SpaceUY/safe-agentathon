@@ -1,18 +1,24 @@
-Configure the agent1 and agent2 to get twofa in your email:
+Details regarding how to configure the agent can be found in 
+agent/src/_common/config/agent-config
+
+FOR DEMO:
+
+Configure the agent1 and agent2 to get twofa in your email.
 agent/src/_common/config/agent1-config
-agent/src/_common/config/agent1-config
+agent/src/_common/config/agent2-config
 Change -> notificationTo: { type: 'email', value: '[YOUR EMAIL]' }
 
 Notifications that the 2fa is required is could be sent to SPAM!!
 
 open terminal in /agent
-
     yarn start:agent1 (Wait until it starts)
+
+open other terminal in /agent
     yarn start:agent2
 
-    (Both agents will log No proposals found)
+(Both agents will log No proposals found)
 
-open terminal in /onchain
+open other terminal in /onchain
 
     npx hardhat test test/BoxUpgradeability.ts --network base_testnet
 

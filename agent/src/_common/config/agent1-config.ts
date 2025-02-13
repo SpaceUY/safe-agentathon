@@ -3,7 +3,7 @@ export default {
   isMultisigExecutor: true,
   autonomousProposalListener: true,
   totp: 'EVMEKJB6LVKDUSC2ORYUGXTCIZETCTS5GZYSGRS5PU5GY3DCENSA',
-  notificationTo: { type: 'email', value: 'dgarcia@spacedev.uy' },
+  notificationTo: { type: 'email', value: 'rpintos@spacedev.uy' },
   multisigs: [
     {
       chainId: '84532',

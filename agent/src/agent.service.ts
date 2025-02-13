@@ -96,7 +96,7 @@ export class AgentService {
         AGENT_MESSAGING_SERVICE,
       );
     } catch (ex) {
-      this._logger.info(ex);
+      this._logger.error(ex);
     }
     return messagingService;
   }
@@ -193,11 +193,11 @@ export class AgentService {
 
     const txToOperate = AgentConfiguration.getTxToOperate(operationName);
     if (txToOperate.holdToCheck) {
-      const { readyToReplicate, waitingForChainIds } = this.isReadyToCheck(
+      const { readyToCheck, waitingForChainIds } = this.isReadyToCheck(
         proposalTxs.multisigs,
         txToOperate,
       );
-      if (!readyToReplicate) {
+      if (!readyToCheck) {
         this._logger.info(
           `${operationName} is not ready to replicate. Waiting for:[${waitingForChainIds.join(',')}]`,
         );
@@ -260,7 +260,7 @@ export class AgentService {
   private isReadyToCheck(
     multiSigsToBeUsedInproposalTxs: Multisig[],
     txToOperate: TxToOperate,
-  ): { readyToReplicate: boolean; waitingForChainIds: string[] } {
+  ): { readyToCheck: boolean; waitingForChainIds: string[] } {
     const setCurrent = new Set(
       multiSigsToBeUsedInproposalTxs.map((m) => m.chainId),
     );
@@ -268,7 +268,7 @@ export class AgentService {
     const intersection = new Set(
       [...setCurrent].filter((chainId) => setExpected.has(chainId)),
     );
-    const readyToReplicate =
+    const readyToCheck =
       intersection.size == setCurrent.size &&
       intersection.size == setExpected.size;
 
@@ -276,7 +276,7 @@ export class AgentService {
       (chainId) => !setCurrent.has(chainId),
     );
 
-    return { readyToReplicate, waitingForChainIds };
+    return { readyToCheck, waitingForChainIds };
   }
 
   private async getLatestProposalsTransactions(
@@ -397,7 +397,7 @@ export class AgentService {
 
       return true;
     } catch (ex) {
-      this._logger.info('Error while executing confirmOrExecuteProposal');
+      this._logger.error('Error while executing confirmOrExecuteProposal');
       return false;
     }
   }
