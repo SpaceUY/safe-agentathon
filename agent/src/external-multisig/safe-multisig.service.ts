@@ -42,18 +42,23 @@ export class SafeMultisigService {
   public async confirmProposedTransaction(params: {
     multisig: string;
     rpcUrl: string;
+    chainId: string;
     proposedTx: MultisigTransaction;
     //This signer here needs to be removed and solved differently
     //to support using MPC services for example instead of a key in memory
     signerKey: string;
   }): Promise<void> {
-    const { rpcUrl, multisig, signerKey, proposedTx } = params;
+    const { rpcUrl, chainId, multisig, signerKey, proposedTx } = params;
+    const apiKit = new SafeApiKit({
+      chainId: BigInt(chainId),
+    });
     const safeWalletForMain: Safe = await Safe.init({
       provider: rpcUrl,
       safeAddress: multisig,
       signer: signerKey,
     });
-    await safeWalletForMain.approveTransactionHash(proposedTx.safeTxHash);
+    const signature = await safeWalletForMain.signHash(proposedTx.safeTxHash);
+    await apiKit.confirmTransaction(proposedTx.safeTxHash, signature.data);
   }
   public async execProposedTransaction(params: {
     multisig: string;
