@@ -30,6 +30,8 @@
     "@safe-global/protocol-kit": "^5.2.1",
     "dotenv-cli": "^8.0.0",
     "ethers": "^6.13.5",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "sib-api-v3-sdk": "^8.5.0",

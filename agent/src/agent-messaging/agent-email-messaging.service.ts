@@ -4,16 +4,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { env } from 'src/_common/config/config';
 import { IAgentMessagingService } from './agent-messaging.interface.service';
-import { LOGGER_INTERFACE } from 'src/agent-logger/agent-logger.module';
 import { LoggerInterface } from 'src/agent-logger/agent-logger.interface';
-import { BREVO_CLIENT } from './agent-messaging.module';
 
 @Injectable()
 export class AgentEmailMessagingService implements IAgentMessagingService {
   constructor(
-    @Inject(BREVO_CLIENT)
+    @Inject('BrevoClient')
     private readonly brevoClient: SibApiV3Sdk.TransactionalEmailsApi,
-    @Inject(LOGGER_INTERFACE) private readonly _logger: LoggerInterface,
+    @Inject('Logger') private readonly _logger: LoggerInterface,
   ) {}
 
   public async sendMessage(
