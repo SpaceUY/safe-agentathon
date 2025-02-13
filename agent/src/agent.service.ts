@@ -183,11 +183,11 @@ export class AgentService {
 
     const txToOperate = AgentConfiguration.getTxToOperate(operationName);
     if (txToOperate.holdToCheck) {
-      const { readyToReplicate, waitingForChainIds } = this.isReadyToCheck(
+      const { readyToCheck, waitingForChainIds } = this.isReadyToCheck(
         proposalTxs.multisigs,
         txToOperate,
       );
-      if (!readyToReplicate) {
+      if (!readyToCheck) {
         console.log(
           operationName,
           'is not ready to replicate.',
@@ -254,7 +254,7 @@ export class AgentService {
   private isReadyToCheck(
     multiSigsToBeUsedInproposalTxs: Multisig[],
     txToOperate: TxToOperate,
-  ): { readyToReplicate: boolean; waitingForChainIds: string[] } {
+  ): { readyToCheck: boolean; waitingForChainIds: string[] } {
     const setCurrent = new Set(
       multiSigsToBeUsedInproposalTxs.map((m) => m.chainId),
     );
@@ -262,7 +262,7 @@ export class AgentService {
     const intersection = new Set(
       [...setCurrent].filter((chainId) => setExpected.has(chainId)),
     );
-    const readyToReplicate =
+    const readyToCheck =
       intersection.size == setCurrent.size &&
       intersection.size == setExpected.size;
 
@@ -270,7 +270,7 @@ export class AgentService {
       (chainId) => !setCurrent.has(chainId),
     );
 
-    return { readyToReplicate, waitingForChainIds };
+    return { readyToCheck, waitingForChainIds };
   }
 
   private async getLatestProposalsTransactions(
