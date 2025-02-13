@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { IAgentInteractionServiceInterface } from './agent-interactions/agent-interaction.service.interface';
 import NotAvailableError from './_common/errors/not-available.error';
@@ -28,16 +28,22 @@ import {
   getProposalIdentificator,
 } from './_common/helpers/proposalTxs';
 import { IAgentMessagingService } from './agent-messaging/agent-messaging.interface.service';
+import { LOGGER_INTERFACE } from './agent-logger/agent-logger.module';
+import { LoggerInterface } from './agent-logger/agent-logger.interface';
+import { AGENT_LOCAL_SIGNER_SERVICE } from './agent-signer/agent-signer.module';
+import { AGENT_MEMORY_STATE_SERVICE } from './agent-state/agent-state.module';
+import { AGENT_MESSAGING_SERVICE } from './agent-messaging/agent-messaging.module';
 
 @Injectable()
 export class AgentService {
   constructor(
     private readonly _moduleRef: ModuleRef,
     private readonly _schedulerRegistry: SchedulerRegistry,
+    @Inject(LOGGER_INTERFACE) private readonly _logger: LoggerInterface,
     @Inject() private readonly _safeAgentService: SafeMultisigService,
-    @Inject('AgentLocalSignerService')
+    @Inject(AGENT_LOCAL_SIGNER_SERVICE)
     private readonly _agentSigner: IAgentSignerService,
-    @Inject('AgentMemoryStateService')
+    @Inject(AGENT_MEMORY_STATE_SERVICE)
     private readonly _agentStateService: IAgentStateService,
   ) {
     safeFireAndForget(() => this.setAgent());
@@ -51,8 +57,10 @@ export class AgentService {
       this._schedulerRegistry.addCronJob('proposalListener', job);
     }
     await this._agentSigner.createSigner();
-    console.log('AGENT ID', AgentConfiguration.getAgentId());
-    console.log('SIGNER READY', await this._agentSigner.getSignerAddress());
+    this._logger.info('AGENT ID: ' + AgentConfiguration.getAgentId());
+    this._logger.info(
+      'SIGNER READY: ' + (await this._agentSigner.getSignerAddress()),
+    );
   }
 
   private resolveInteraction<T, S>(interactionKey: string) {
@@ -85,10 +93,10 @@ export class AgentService {
     let messagingService: IAgentMessagingService | undefined;
     try {
       messagingService = this._moduleRef.get<IAgentMessagingService>(
-        'AgentMessagingService',
+        AGENT_MESSAGING_SERVICE,
       );
     } catch (ex) {
-      console.log(ex);
+      this._logger.info(ex);
     }
     return messagingService;
   }
@@ -114,13 +122,13 @@ export class AgentService {
       );
       const proposal = this.getProposalToAttend(proposalTransactions);
       if (!proposal) {
-        console.log('No proposal found');
+        this._logger.info('No proposals available at the moment');
         this._agentStateService.state = AgentState.IDLE;
       } else {
-        console.log('Proposal found');
+        this._logger.info('Proposal available');
         const { proposalTxs, status } =
           await this.evalProposalExecution(proposal);
-        console.log('Proposal found evaluated with status', status);
+        this._logger.info(`Proposal evaluation completed with ${status}`);
         if (status == 'ready') {
           this._agentStateService.addProposalReadyToExecute(proposalTxs);
           this._agentStateService.state = AgentState.EXECUTING;
@@ -136,7 +144,9 @@ export class AgentService {
         }
       }
     } else if (agentState == AgentState.WAITING_FOR_TWO_FA) {
-      console.log('Waiting for two fa');
+      this._logger.info(
+        'Awaiting two-factor authentication (2FA) verification',
+      );
       const proposalTxs = this._agentStateService.getProposalWaitingForTwoFA();
       if (proposalTxs) {
         const proposalIdentificator = getProposalIdentificator(proposalTxs);
@@ -150,7 +160,7 @@ export class AgentService {
         this._agentStateService.state = AgentState.IDLE;
       }
     } else if (agentState == AgentState.EXECUTING) {
-      console.log('Executing');
+      this._logger.info('Executing proposal');
       const proposalTxs = this._agentStateService.getProposalReadyToExecute();
       if (proposalTxs) {
         const executedSucessfully = await this.confirmOrExecuteProposal(
@@ -188,12 +198,8 @@ export class AgentService {
         txToOperate,
       );
       if (!readyToReplicate) {
-        console.log(
-          operationName,
-          'is not ready to replicate.',
-          'Waiting for:[',
-          waitingForChainIds.join(','),
-          ']',
+        this._logger.info(
+          `${operationName} is not ready to replicate. Waiting for:[${waitingForChainIds.join(',')}]`,
         );
         return {
           proposalTxs,
@@ -226,7 +232,7 @@ export class AgentService {
       const checkFails = checkResult.filter((cr) => !cr.result);
       if (checkFails.length > 0) {
         checkFails.forEach((cf) =>
-          console.log('Checks dont pass', cf.checkKey),
+          this._logger.info('Checks dont pass ' + cf.checkKey),
         );
         return {
           proposalTxs: proposalTxs,
@@ -239,7 +245,7 @@ export class AgentService {
       );
     }
 
-    console.log('Checks passed');
+    this._logger.info('Checks passed');
 
     return {
       proposalTxs: proposalTxs,
@@ -340,7 +346,9 @@ export class AgentService {
         isMultisigExecutor,
       );
 
-      console.log('toConfirm', toConfirm.length, 'toExecute', toExecute.length);
+      this._logger.info(
+        'toConfirm ' + toConfirm.length + '| toExecute' + toExecute.length,
+      );
 
       //Bad practice this will be tackled differently
       const signerKey = await this._agentSigner.getSignerKey();
@@ -374,22 +382,22 @@ export class AgentService {
         );
       }
       if (toConfirm.length > 0) {
-        console.log('Confirming proposals', toConfirm.length);
+        this._logger.info('Confirming proposals' + toConfirm.length);
         await Promise.all(confirmations.map((fn) => fn()));
       }
       if (holdToReplicate) {
         if (toConfirm.length == 0 && toExecute.length > 0) {
-          console.log('Executing proposals', toExecute.length);
+          this._logger.info('Executing proposals' + toExecute.length);
           await Promise.all(executions.map((fn) => fn()));
         }
       } else if (toExecute.length > 0) {
-        console.log('Executing proposals', toExecute.length);
+        this._logger.info('Executing proposals' + toExecute.length);
         await Promise.all(executions.map((fn) => fn()));
       }
 
       return true;
     } catch (ex) {
-      console.log('Error while executing confirmOrExecuteProposal');
+      this._logger.info('Error while executing confirmOrExecuteProposal');
       return false;
     }
   }

@@ -8,6 +8,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AgentSignerModule } from './agent-signer/agent-signer.module';
 import { AgentStateModule } from './agent-state/agent-state.module';
 import { AgentMessagingModule } from './agent-messaging/agent-messaging.module';
+import { LoggerModule } from './agent-logger/agent-logger.module';
 
 const agentCheckModule = AgentChecksModule.register();
 const agentInteractionsModule = AgentInteractionsModule.register();
@@ -22,6 +23,7 @@ const agentMessagingModule = AgentMessagingModule.register();
     AgentSignerModule,
     AgentStateModule,
     agentMessagingModule,
+    LoggerModule,
   ],
   controllers: [AgentController],
   providers: [

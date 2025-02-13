@@ -2,7 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IAgentInteractionServiceInterface } from './agent-interaction.service.interface';
 import * as speakeasy from 'speakeasy';
 import { AgentConfiguration } from 'src/agent-configuration';
-import { IAgentStateService } from 'src/agent-state/agent-state.module';
+import {
+  AGENT_MEMORY_STATE_SERVICE,
+  IAgentStateService,
+} from 'src/agent-state/agent-state.module';
 
 @Injectable()
 export class AgentInteractionPushTwoFAcodeService
@@ -11,7 +14,7 @@ export class AgentInteractionPushTwoFAcodeService
   private readonly secret: string = AgentConfiguration.getTotp();
 
   constructor(
-    @Inject('AgentMemoryStateService')
+    @Inject(AGENT_MEMORY_STATE_SERVICE)
     private readonly _agentStateService: IAgentStateService,
   ) {}
 
