@@ -208,49 +208,5 @@ describe("BoxUpgradeability", function () {
 
       console.log("Transaction proposed with hash:", safeTxHash);
     });
-
-    it("Propose upgrade with proposer", async function () {
-      const {
-        boxProxy,
-        boxProxyAddress,
-        boxV2DeployedAddress,
-        multisig,
-        rpcUrl,
-        apiKit,
-      } = await getContractsToProposeUpgrade();
-      //0x02ac83F5c6Af46FF26a3E2F8AFF82C62B6286d47
-      const proposerWallet = new hre.ethers.Wallet(
-        "0x242ab6f7c55750585d8dcf953ab6ee4ab7f08ca87551a4a20571c25ec949df81",
-        new hre.ethers.JsonRpcProvider(rpcUrl)
-      );
-      const safeWallet: Safe = await Safe.init({
-        provider: rpcUrl,
-        safeAddress: multisig,
-        signer: proposerWallet.privateKey,
-      });
-      const tx = await boxProxy
-        .getFunction("upgradeToAndCall")
-        .populateTransaction(boxV2DeployedAddress, "0x");
-      const safeTx = await safeWallet.createTransaction({
-        transactions: [
-          {
-            to: boxProxyAddress,
-            data: tx.data,
-            value: "0",
-          },
-        ],
-      });
-      const safeTxHash = await safeWallet.getTransactionHash(safeTx);
-      const signature = await safeWallet.signHash(safeTxHash);
-      await apiKit.proposeTransaction({
-        safeAddress: multisig,
-        safeTransactionData: safeTx.data,
-        safeTxHash,
-        senderSignature: signature.data,
-        senderAddress: proposerWallet.address,
-      });
-
-      console.log("Transaction proposed with hash:", safeTxHash);
-    });
   });
 });
