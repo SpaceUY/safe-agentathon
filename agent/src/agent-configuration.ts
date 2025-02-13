@@ -22,7 +22,9 @@ export class AgentConfiguration {
     const checks: AgentChecks[] = [];
     const operations = Object.keys(AgentConfiguration.getConfig().txsToOperate);
     operations.forEach((op) => {
-      checks.push(...AgentConfiguration.getConfig().txsToOperate[op].checks);
+      checks.push(
+        ...(AgentConfiguration.getConfig().txsToOperate[op].checks ?? []),
+      );
     });
     return checks;
   }

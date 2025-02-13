@@ -292,8 +292,16 @@ export class AgentService {
       const latestsProposalTxs =
         await this.getLatestProposalTransaction(multisig);
       if (latestsProposalTxs) {
-        //TODO: We need to consider native transfers
-        if (latestsProposalTxs?.dataDecoded?.method) {
+        const isContractCall = latestsProposalTxs?.dataDecoded?.method;
+        const isNativeTransfer =
+          !isContractCall && BigInt(latestsProposalTxs.value) > 0n;
+        if (isNativeTransfer) {
+          proposalTxs.push({
+            operationName: '[NATIVE_TRANSFER]',
+            multisig,
+            multisigTx: latestsProposalTxs,
+          });
+        } else if (isContractCall) {
           proposalTxs.push({
             operationName: latestsProposalTxs.dataDecoded?.method,
             multisig,

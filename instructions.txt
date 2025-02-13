@@ -35,3 +35,14 @@ open postman and send codes to the respectives agents
 Agents will complete their job by confirming the txs 
 and the agent 1 because is executor and has funds to pay will execute the transaction
 to complete the upgrade
+
+WANT MORE?
+
+If you want to test a transfer proposal:
+-go to /onchain/test/BoxUpgradeability.ts
+-skip the following test -> it.skip("Propose upgrade with proposer")
+-unskip the following test -> it("Propose transfer with proposer")
+
+And proceed by doing exactly the same.
+Consider that we have fund the multisig with some ethers and if is empty this tx wont work.
+We are not performing any check!

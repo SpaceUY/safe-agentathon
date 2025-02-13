@@ -83,6 +83,12 @@ export default {
       */
       holdToReplicate: true,
     },
+    '[NATIVE_TRANSFER]': {
+      chainIds: ['84532', '11155111'],
+      twoFARequired: true,
+      holdToCheck: true,
+      holdToReplicate: true,
+    },
   },
 
   /*
