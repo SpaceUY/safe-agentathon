@@ -11,6 +11,7 @@ import { AgentMessagingModule } from './agent-messaging/agent-messaging.module';
 
 const agentCheckModule = AgentChecksModule.register();
 const agentInteractionsModule = AgentInteractionsModule.register();
+const agentMessagingModule = AgentMessagingModule.register();
 
 @Module({
   imports: [
@@ -20,13 +21,14 @@ const agentInteractionsModule = AgentInteractionsModule.register();
     ScheduleModule.forRoot(),
     AgentSignerModule,
     AgentStateModule,
-    AgentMessagingModule.register(),
+    agentMessagingModule,
   ],
   controllers: [AgentController],
   providers: [
     AgentService,
     ...agentCheckModule.providers!,
     ...agentInteractionsModule.providers!,
+    ...agentMessagingModule.providers!,
   ],
 })
 export class AgentModule {}

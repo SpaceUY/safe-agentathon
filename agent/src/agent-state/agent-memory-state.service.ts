@@ -10,7 +10,7 @@ export class AgentMemoryStateService implements IAgentStateService {
   private _proposalEvaluationPool: Record<
     string,
     { twoFAapproved: boolean; checksPassed: boolean }
-  >;
+  > = {};
   private readonly PROPOSAL_WAITING_FOR_TWO_FA_EXPIRATION_TIME_IN_SECONDS =
     60 * 5 * 1000;
   private readonly PROPOSAL_TO_EXECUTE_EXPIRATION_TIME_IN_SECONDS =
@@ -75,7 +75,7 @@ export class AgentMemoryStateService implements IAgentStateService {
   public _getProposalWaitingForTwoFA(): ProposalTxs | undefined {
     const proposal =
       this._proposalWaitingForTwoFASubmissionDateTime +
-        this.PROPOSAL_WAITING_FOR_TWO_FA_EXPIRATION_TIME_IN_SECONDS <
+        this.PROPOSAL_WAITING_FOR_TWO_FA_EXPIRATION_TIME_IN_SECONDS >
       Date.now()
         ? this._proposalWaitingForTwoFA
         : undefined;
@@ -109,7 +109,7 @@ export class AgentMemoryStateService implements IAgentStateService {
   public getProposalReadyToExecute(): ProposalTxs | undefined {
     const proposal =
       this._proposalReadyToExecuteSubmissionDateTime +
-        this.PROPOSAL_TO_EXECUTE_EXPIRATION_TIME_IN_SECONDS <
+        this.PROPOSAL_TO_EXECUTE_EXPIRATION_TIME_IN_SECONDS >
       Date.now()
         ? this._proposalReadyToExecute
         : undefined;
