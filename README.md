@@ -1,20 +1,20 @@
-Details regarding how to configure the agent can be found in 
-agent/src/_common/config/agent-config
+Details regarding how to configure the agent can be found in
+agent/src/\_common/config/agent-config
 
 FOR DEMO:
 
 Configure the agent1 and agent2 to get twofa in your email.
-agent/src/_common/config/agent1-config
-agent/src/_common/config/agent2-config
+agent/src/\_common/config/agent1-config
+agent/src/\_common/config/agent2-config
 Change -> notificationTo: { type: 'email', value: '[YOUR EMAIL]' }
 
 Notifications that the 2fa is required is could be sent to SPAM!!
 
 open terminal in /agent
-    yarn start:agent1 (Wait until it starts)
+yarn start:agent1 (Wait until it starts)
 
 open other terminal in /agent
-    yarn start:agent2
+yarn start:agent2
 
 (Both agents will log No proposals found)
 
@@ -32,7 +32,7 @@ open other terminal in /onchain
 
 open postman and send codes to the respectives agents
 
-Agents will complete their job by confirming the txs 
+Agents will complete their job by confirming the txs
 and the agent 1 because is executor and has funds to pay will execute the transaction
 to complete the upgrade
 
