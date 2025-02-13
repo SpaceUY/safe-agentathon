@@ -1,0 +1,25 @@
+open terminal in /agent
+
+    yarn start:agent1 (Wait until it starts)
+    yarn start:agent2
+
+
+    (Both agents will log No proposals found)
+
+open terminal in /onchain
+
+    npx hardhat test test/BoxUpgradeability.ts --network base_testnet
+
+    (Both agents will log they are waiting for a proposal in sepolia)
+
+    npx hardhat test test/BoxUpgradeability.ts --network sepolia_testnet
+
+    (Both will log that upgrade checks have passed)
+
+    (Both will start asking for two fa)
+
+open postman and send codes to the respectives agents
+
+Agents will complete their job by confirming the txs 
+and the agent 1 because is executor and has funds to pay will execute the transaction
+to complete the upgrade
