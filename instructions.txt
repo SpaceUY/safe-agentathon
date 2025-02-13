@@ -1,8 +1,14 @@
+Configure the agent1 and agent2 to get twofa in your email:
+agent/src/_common/config/agent1-config
+agent/src/_common/config/agent1-config
+Change -> notificationTo: { type: 'email', value: '[YOUR EMAIL]' }
+
+Notifications that the 2fa is required is could be sent to SPAM!!
+
 open terminal in /agent
 
     yarn start:agent1 (Wait until it starts)
     yarn start:agent2
-
 
     (Both agents will log No proposals found)
 
