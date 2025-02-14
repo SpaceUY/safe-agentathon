@@ -1,3 +1,9 @@
+# **Disclaimer**
+
+⚠️ This product was entirely designed and developed within a one-week hackathon.
+
+Agent keys are stored in memory, which is completely insecure. We strongly believe that connecting agents to custodial services, such as Fireblocks, is essential for security.
+
 # **Agent Configuration & Demo Guide**
 
 ## **Agent Configuration**
