@@ -10,8 +10,8 @@ const Safe = (SafeModule as any)?.default || SafeModule;
 
 // Configuration
 const RPC_URL = process.env.RPC_URL!;
-const SAFE_WALLET_ADDRESS = "0xAC5D465B855D22f1a984f55A7859d197C11aA2E2";// Deployed Safe wallet address
-//const SAFE_WALLET_ADDRESS = "0x3Ed65Bc7A9b49AB4B601b2a8e98610079BC17303";
+//const SAFE_WALLET_ADDRESS = "0xAC5D465B855D22f1a984f55A7859d197C11aA2E2";
+const SAFE_WALLET_ADDRESS = "0x3Ed65Bc7A9b49AB4B601b2a8e98610079BC17303";
 
 (async () => {
     try {
@@ -31,7 +31,8 @@ const SAFE_WALLET_ADDRESS = "0xAC5D465B855D22f1a984f55A7859d197C11aA2E2";// Depl
             provider: RPC_URL,
             safeAddress: SAFE_WALLET_ADDRESS,
         });
-        
+    
+
         console.log('✅ Safe SDK initialized\n');
         
         // Check if Safe is deployed
@@ -48,6 +49,11 @@ const SAFE_WALLET_ADDRESS = "0xAC5D465B855D22f1a984f55A7859d197C11aA2E2";// Depl
         
         console.log('\n✅ Safe Version Information:');
         console.log(`   Version: ${version}`);
+        try{
+            console.log(`   Modules: ${await safeSdk.getModules()}`);
+        } catch (error) {
+            console.log('   Modules: No modules enabled');
+        }
         //console.log(`   Safe Address: ${await safeSdk.getAddress()}`);
         
     } catch (error) {

@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "playground": "tsx src/index.ts",
-    "run": "tsx src/index.ts"
+    "run": "tsx src/index.ts",
+    "get-safe-version": "tsx src/get-safe-version.ts",
+    "enable-module": "tsx src/enable-module.ts",
+    "safe-user-op": "tsx src/safe-user-op.ts"
   },
   "keywords": [],
   "author": "",
