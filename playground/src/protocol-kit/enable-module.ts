@@ -11,7 +11,7 @@ const Safe = (SafeModule as any)?.default || SafeModule;
 // Configuration
 const RPC_URL = process.env.RPC_URL!;
 const PRIVATE_KEY = process.env.PRIVATE_KEY!; // Safe owner's private key
-const MODULE_ADDRESS = "0xa581c4A4DB7175302464fF3C06380BC3270b4037"; // Module address to enable
+const MODULE_ADDRESS = "0x75cf11467937ce3F2f357CE24ffc3DBF8fD5c226"; // Module address to enable
 const SAFE_WALLET_ADDRESS = "0x3Ed65Bc7A9b49AB4B601b2a8e98610079BC17303";
 
 (async () => {
