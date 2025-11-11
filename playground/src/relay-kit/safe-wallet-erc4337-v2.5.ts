@@ -3,7 +3,6 @@ dotenv.config();
 
 import { Safe4337Pack, SafeOperationFactory, createUserOperation } from '@safe-global/relay-kit';
 import { ethers } from 'ethers';
-//import { ENTRYPOINT_ADDRESS_V06, ENTRYPOINT_ADDRESS_V07 } from "@safe-global/relay-kit/dist/src/packs/safe-4337/constants";
 const ENTRYPOINT_ADDRESS_V06 = '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'
 const ENTRYPOINT_ADDRESS_V07 = '0x0000000071727De22E5E9d8BAf0edAc6f37da032'
 
