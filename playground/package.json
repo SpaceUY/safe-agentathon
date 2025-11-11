@@ -11,15 +11,18 @@
     "safe-wallet": "tsx src/protocol-kit/safe-wallet.ts",
     "get-safe-version": "tsx src/protocol-kit/get-safe-version.ts",
     "enable-module": "tsx src/protocol-kit/enable-module.ts",
-    "safe-wallet-erc4337": "tsx src/relay-kit/safe-wallet-erc4337.ts"
+    "safe-wallet-erc4337-v1": "tsx src/relay-kit/safe-wallet-erc4337-v1.ts",
+    "safe-wallet-erc4337-v2": "tsx src/relay-kit/safe-wallet-erc4337-v2.ts",
+    "safe-wallet-erc4337-v2.5": "tsx src/relay-kit/safe-wallet-erc4337-v2.5.ts",
+    "safe-wallet-erc4337-v3": "tsx src/relay-kit/safe-wallet-erc4337-v3.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@safe-global/api-kit": "^2.5.8",
-    "@safe-global/protocol-kit": "^5.2.1",
-    "@safe-global/relay-kit": "^4.1.0",
+    "@safe-global/relay-kit": "link:../safe-core-sdk/packages/relay-kit",
+    "@safe-global/protocol-kit": "link:../safe-core-sdk/packages/protocol-kit",
+    "@safe-global/api-kit": "link:../safe-core-sdk/packages/api-kit",
     "dotenv": "^16.4.7",
     "ethers": "^6.13.5"
   },

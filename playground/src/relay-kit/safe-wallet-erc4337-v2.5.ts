@@ -1,8 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { Safe4337Pack } from '@safe-global/relay-kit';
+import { Safe4337Pack, SafeOperationFactory, createUserOperation } from '@safe-global/relay-kit';
 import { ethers } from 'ethers';
+//import { ENTRYPOINT_ADDRESS_V06, ENTRYPOINT_ADDRESS_V07 } from "@safe-global/relay-kit/dist/src/packs/safe-4337/constants";
+const ENTRYPOINT_ADDRESS_V06 = '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'
+const ENTRYPOINT_ADDRESS_V07 = '0x0000000071727De22E5E9d8BAf0edAc6f37da032'
 
 //RECORDAR:
 //Fondear sender
@@ -10,7 +13,8 @@ import { ethers } from 'ethers';
 //Cambiar salt si se quiere usar una billetera nueva
 
 // Safe deployment configuration (from index.ts)
-const salt = "0x12345678912";
+const salt = "0x123456789123";//Already deployed
+//const salt = "0x123456789123909";//Not deployed (Check just in case)
 const safeVersion = "1.4.1";
 const deploymentType = "canonical";
 
@@ -74,6 +78,143 @@ function convertUserOperationToHex(userOp: any): any {
   return converted;
 }
 
+function ensureGasFees(feeData: ethers.FeeData): {
+  maxFeePerGas: bigint;
+  maxPriorityFeePerGas: bigint;
+} {
+  const minPriorityFeePerGas = 30_000_000_000n; // 30 gwei
+  const minMaxFeePerGas = 30_000_000_000n; // 30 gwei
+
+  let maxFeePerGas = feeData.maxFeePerGas ?? feeData.gasPrice ?? minMaxFeePerGas;
+  let maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ?? minPriorityFeePerGas;
+
+  if (maxPriorityFeePerGas < minPriorityFeePerGas) {
+    maxPriorityFeePerGas = minPriorityFeePerGas;
+  }
+  if (maxFeePerGas < minMaxFeePerGas) {
+    maxFeePerGas = minMaxFeePerGas;
+  }
+  if (maxFeePerGas < maxPriorityFeePerGas) {
+    maxFeePerGas = maxPriorityFeePerGas;
+  }
+
+  return { maxFeePerGas, maxPriorityFeePerGas };
+}
+
+async function estimateAndApplyGas({
+  safeOperation,
+  bundlerUrl,
+  entryPoint,
+  maxFeePerGas,
+  maxPriorityFeePerGas,
+}: {
+  safeOperation: any;
+  bundlerUrl: string;
+  entryPoint: string;
+  maxFeePerGas: bigint;
+  maxPriorityFeePerGas: bigint;
+}) {
+  const baseUserOp = (safeOperation as any).userOperation;
+  const entryPointAddress = entryPoint.toLowerCase();
+  const isEntryPointV06 = entryPointAddress === ENTRYPOINT_ADDRESS_V06.toLowerCase();
+
+  const userOpPayload: any = {
+    sender: baseUserOp.sender,
+    nonce: baseUserOp.nonce,
+    callData: baseUserOp.callData,
+    verificationGasLimit: baseUserOp.verificationGasLimit,
+    preVerificationGas: baseUserOp.preVerificationGas,
+    signature: "0x000000000000000000000000",
+  };
+
+  if (isEntryPointV06) {
+    if (baseUserOp.initCode) {
+      userOpPayload.initCode = baseUserOp.initCode;
+    }
+    if (baseUserOp.paymasterAndData) {
+      userOpPayload.paymasterAndData = baseUserOp.paymasterAndData;
+    }
+  } else {
+    if (baseUserOp.factory) {
+      userOpPayload.factory = baseUserOp.factory;
+    }
+    if (baseUserOp.factoryData) {
+      userOpPayload.factoryData = baseUserOp.factoryData;
+    }
+    if (baseUserOp.paymaster !== undefined && baseUserOp.paymaster !== "0x") {
+        userOpPayload.paymaster = baseUserOp.paymaster;
+        userOpPayload.paymasterData = baseUserOp.paymasterData;
+        userOpPayload.paymasterVerificationGasLimit = baseUserOp.paymasterVerificationGasLimit ?? "0";
+        userOpPayload.paymasterPostOpGasLimit = baseUserOp.paymasterPostOpGasLimit ?? "0";
+    }
+  }
+
+  const userOpHex = convertUserOperationToHex(userOpPayload);
+  userOpHex.maxFeePerGas = '0x' + maxFeePerGas.toString(16);
+  userOpHex.maxPriorityFeePerGas = '0x' + maxPriorityFeePerGas.toString(16);
+
+  const requestBody = {
+    jsonrpc: '2.0',
+    method: 'eth_estimateUserOperationGas',
+    params: [userOpHex, entryPoint],
+    id: 1,
+  };
+
+  console.log("=== Request to Bundler ===");
+  console.log("Original userOp:", jsonStringifyWithBigInt(baseUserOp, 2));
+  console.log("Prepared userOp:", jsonStringifyWithBigInt(userOpHex, 2));
+  console.log("Entry Point:", entryPoint);
+  console.log("Request body:", jsonStringifyWithBigInt(requestBody, 2));
+  console.log("==========================");
+
+  const response = await fetch(bundlerUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: jsonStringifyWithBigInt(requestBody),
+  });
+
+  const result: any = await response.json();
+
+  console.log("=== Bundler Response ===");
+  console.log("Result:", jsonStringifyWithBigInt(result, 2));
+  console.log("=======================");
+  if (result.error) {
+    throw new Error(result.error.message || 'Gas estimation failed');
+  }
+
+  const addBuffer = (value: string, bufferPercent: number = 5, minBuffer: number = 1000): string => {
+    const hexValue = value.startsWith('0x') ? value.slice(2) : value;
+    const numValue = BigInt('0x' + hexValue);
+    const buffer = numValue * BigInt(bufferPercent) / BigInt(100);
+    const minBufferBigInt = BigInt(minBuffer);
+    const finalBuffer = buffer > minBufferBigInt ? buffer : minBufferBigInt;
+    const finalValue = numValue + finalBuffer;
+    return '0x' + finalValue.toString(16);
+  };
+
+  const callGasLimit = addBuffer(result.result.callGasLimit, 5, 1000);
+  const verificationGasLimit = addBuffer(result.result.verificationGasLimit, 5, 1000);
+  const preVerificationGas = addBuffer(result.result.preVerificationGas, 5, 1000);
+
+  const estimations = {
+    callGasLimit,
+    verificationGasLimit,
+    preVerificationGas,
+    maxFeePerGas: maxFeePerGas.toString(),
+    maxPriorityFeePerGas: maxPriorityFeePerGas.toString(),
+  };
+
+  safeOperation.addEstimations(estimations);
+
+  console.log("=== Gas Values with Buffer ===");
+  console.log(`callGasLimit: ${result.result.callGasLimit} -> ${callGasLimit}`);
+  console.log(`verificationGasLimit: ${result.result.verificationGasLimit} -> ${verificationGasLimit}`);
+  console.log(`preVerificationGas: ${result.result.preVerificationGas} -> ${preVerificationGas}`);
+  console.log("==============================");
+
+  return estimations;
+}
+
 // Alchemy network names by chain ID (for bundler endpoints)
 const ALCHEMY_NETWORKS: Record<string, string> = {
   '80002': 'polygon-amoy', // Polygon Amoy
@@ -85,6 +226,28 @@ const ALCHEMY_NETWORKS: Record<string, string> = {
   '421614': 'arb-sepolia', // Arbitrum Sepolia
 };
 
+//https://docs.safe.global/advanced/smart-account-supported-networks
+//ATTENTION!! Custom contracts configuration per network.
+const SAFE_4337_CUSTOM_CONTRACTS: Record<
+  string,
+  {
+    safe4337ModuleAddress?: string;
+    safeModulesSetupAddress?: string;
+    safeModulesVersion?: string;
+  }
+> = {
+   '80002': {
+    safe4337ModuleAddress: '0x75cf11467937ce3f2f357ce24ffc3dbf8fd5c226',
+    safeModulesSetupAddress: '0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47',
+    safeModulesVersion: '0.3.0',
+  },
+  // '80002': {
+  //   safe4337ModuleAddress: '0xa581c4A4DB7175302464fF3C06380BC3270b4037',
+  //   safeModulesSetupAddress: '0x8EcD4ec46D4D2a6B64fE960B3D64e8B94B2234eb',
+  //   safeModulesVersion: '0.2.0',
+  // },
+};
+
 // Configuration
 const RPC_URL = process.env.RPC_URL!;
 const CHAIN_ID = process.env.CHAIN_ID!;
@@ -94,6 +257,7 @@ const alchemyNetwork = ALCHEMY_NETWORKS[CHAIN_ID];
 
 // Build bundler URL
 let BUNDLER_URL: string | undefined;
+
 if (process.env.BUNDLER_RPC_URL) {
   BUNDLER_URL = process.env.BUNDLER_RPC_URL;
 } else if (ALCHEMY_API_KEY && alchemyNetwork) {
@@ -103,6 +267,19 @@ if (process.env.BUNDLER_RPC_URL) {
 // Transfer configuration
 const transferTo = process.env.TRANSFER_TO || "0x26aCB57e5ee79342e959b50475455Df2C2018A37";
 const transferAmount = 1n;
+
+const chainConfig = SAFE_4337_CUSTOM_CONTRACTS[CHAIN_ID];
+const customContracts = chainConfig
+  ? {
+      ...(chainConfig.safe4337ModuleAddress
+        ? { safe4337ModuleAddress: chainConfig.safe4337ModuleAddress }
+        : {}),
+      ...(chainConfig.safeModulesSetupAddress
+        ? { safeModulesSetupAddress: chainConfig.safeModulesSetupAddress }
+        : {}),
+    }
+  : undefined;
+const safeModulesVersion = chainConfig?.safeModulesVersion;
 
 /**
  * Predicts the Safe wallet address using Safe4337Pack
@@ -132,10 +309,12 @@ export async function predictSafe(): Promise<string> {
     }
 
     // Initialize Safe4337Pack
-    console.log('📦 Initializing Safe4337Pack...');
+    console.log('📦 Initializing Safe4337Pack...', RPC_URL, BUNDLER_URL);
     const safe4337Pack = await Safe4337Pack.init({
       provider: RPC_URL,
       bundlerUrl: BUNDLER_URL,
+      ...(safeModulesVersion ? { safeModulesVersion } : {}),
+      ...(customContracts ? { customContracts } : {}),
       options: {
         owners: [wallet.address],
         threshold: 1,
@@ -146,7 +325,7 @@ export async function predictSafe(): Promise<string> {
     });
 
     console.log('✅ Safe4337Pack initialized\n');
-
+    
     // Get the predicted Safe address from the internal protocolKit
     // Safe4337Pack uses protocolKit internally which has getAddress()
     const predictedAddress = await (safe4337Pack as any).protocolKit?.getAddress();
@@ -216,6 +395,8 @@ export async function execute(transactions?: Array<{ to: string; value: string; 
     const safe4337Pack = await Safe4337Pack.init({
       provider: RPC_URL,
       bundlerUrl: BUNDLER_URL,
+      ...(safeModulesVersion ? { safeModulesVersion } : {}),
+      ...(customContracts ? { customContracts } : {}),
       options: {
         owners: [wallet.address],
         threshold: 1,
@@ -232,139 +413,43 @@ export async function execute(transactions?: Array<{ to: string; value: string; 
     // Get current gas prices from the network
     console.log('⛽ Getting current gas prices from network...');
     const feeData = await provider.getFeeData();
-    
-    // Ensure we have proper gas prices (at least 30 gwei for maxPriorityFeePerGas)
-    const minPriorityFeePerGas = 30000000000n; // 30 gwei
-    const minMaxFeePerGas = 30000000000n; // 30 gwei
-    
-    let maxFeePerGas = feeData.maxFeePerGas || feeData.gasPrice || minMaxFeePerGas;
-    let maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || minPriorityFeePerGas;
-    
-    // Ensure minimum values
-    if (maxPriorityFeePerGas < minPriorityFeePerGas) {
-      maxPriorityFeePerGas = minPriorityFeePerGas;
-    }
-    if (maxFeePerGas < minMaxFeePerGas) {
-      maxFeePerGas = minMaxFeePerGas;
-    }
-    
-    // Ensure maxFeePerGas >= maxPriorityFeePerGas
-    if (maxFeePerGas < maxPriorityFeePerGas) {
-      maxFeePerGas = maxPriorityFeePerGas;
-    }
-    
+    const { maxFeePerGas, maxPriorityFeePerGas } = ensureGasFees(feeData);
+
     console.log(`   maxFeePerGas: ${maxFeePerGas.toString()} (${ethers.formatUnits(maxFeePerGas, 'gwei')} gwei)`);
     console.log(`   maxPriorityFeePerGas: ${maxPriorityFeePerGas.toString()} (${ethers.formatUnits(maxPriorityFeePerGas, 'gwei')} gwei)\n`);
 
-    // Create transaction with custom fee estimator to avoid Pimlico-specific calls
-    // The Safe4337Pack might be calling pimlico_getUserOperationGasPrice internally
-    // We can provide a custom feeEstimator that uses standard ERC-4337 methods
-    const safeOperation = await safe4337Pack.createTransaction({
-      transactions: txList,
-      options: {
-        // Provide a custom fee estimator that uses standard ERC-4337 methods
-        // This prevents the pack from calling Pimlico-specific methods
-        feeEstimator: {
-          preEstimateUserOperationGas: async (props) => {
-            // Use standard ERC-4337 gas estimation via the bundler
-            // The bundler should handle this using eth_estimateUserOperationGas
-            // Return the gas data from the bundler
-            
-            // Convert user operation numeric fields to hex strings
-            const userOpHex = convertUserOperationToHex(props.userOperation);
-            
-            // Ensure gas prices are set correctly (override if too low)
-            userOpHex.maxFeePerGas = '0x' + maxFeePerGas.toString(16);
-            userOpHex.maxPriorityFeePerGas = '0x' + maxPriorityFeePerGas.toString(16);
-            
-            const requestBody = {
-              jsonrpc: '2.0',
-              method: 'eth_estimateUserOperationGas',
-              params: [userOpHex, props.entryPoint],
-              id: 1,
-            };
-            
-            console.log("=== Request to Bundler ===");
-            console.log("Original userOp:", jsonStringifyWithBigInt(props.userOperation, 2));
-            console.log("Converted userOp:", jsonStringifyWithBigInt(userOpHex, 2));
-            console.log("Entry Point:", props.entryPoint);
-            console.log("Request body:", jsonStringifyWithBigInt(requestBody, 2));
-            console.log("==========================");
-            
-            const response = await fetch(props.bundlerUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: jsonStringifyWithBigInt(requestBody),
-            });
-            
-            const result: any = await response.json();
+    let entryPoint: string;
+    if(safeModulesVersion === '0.2.0') {
+      entryPoint = ENTRYPOINT_ADDRESS_V06;
+    } else {
+      entryPoint = ENTRYPOINT_ADDRESS_V07;
+    }
 
-            console.log("=== Bundler Response ===");
-            console.log("Result:", jsonStringifyWithBigInt(result, 2));
-            console.log("=======================");
-            if (result.error) {
-              throw new Error(result.error.message || 'Gas estimation failed');
-            }
-            
-            // Add buffer to gas values to account for bundler requirements
-            // Convert hex strings to BigInt, add buffer, then convert back to hex
-            const addBuffer = (value: string, bufferPercent: number = 5, minBuffer: number = 1000): string => {
-              // Remove '0x' prefix if present
-              const hexValue = value.startsWith('0x') ? value.slice(2) : value;
-              const numValue = BigInt('0x' + hexValue);
-              // Add percentage buffer (at least minBuffer)
-              const buffer = numValue * BigInt(bufferPercent) / BigInt(100);
-              const minBufferBigInt = BigInt(minBuffer);
-              const finalBuffer = buffer > minBufferBigInt ? buffer : minBufferBigInt;
-              const finalValue = numValue + finalBuffer;
-              return '0x' + finalValue.toString(16);
-            };
-            
-            const callGasLimit = addBuffer(result.result.callGasLimit, 5, 1000);
-            const verificationGasLimit = addBuffer(result.result.verificationGasLimit, 5, 1000);
-            const preVerificationGas = addBuffer(result.result.preVerificationGas, 5, 1000);
-            
-            console.log("=== Gas Values with Buffer ===");
-            console.log(`callGasLimit: ${result.result.callGasLimit} -> ${callGasLimit}`);
-            console.log(`verificationGasLimit: ${result.result.verificationGasLimit} -> ${verificationGasLimit}`);
-            console.log(`preVerificationGas: ${result.result.preVerificationGas} -> ${preVerificationGas}`);
-            console.log("==============================");
-            
-            return {
-              callGasLimit,
-              verificationGasLimit,
-              preVerificationGas,
-            };
-          },
-          postEstimateUserOperationGas: async (props) => {
-            // After gas estimation, ensure gas prices are set correctly
-            const userOp = props.userOperation as any;
-            
-            // Update gas prices if they're too low
-            if (userOp.maxFeePerGas) {
-              const currentMaxFee = BigInt(userOp.maxFeePerGas);
-              if (currentMaxFee < maxFeePerGas) {
-                userOp.maxFeePerGas = '0x' + maxFeePerGas.toString(16);
-              }
-            } else {
-              userOp.maxFeePerGas = '0x' + maxFeePerGas.toString(16);
-            }
-            
-            if (userOp.maxPriorityFeePerGas) {
-              const currentMaxPriority = BigInt(userOp.maxPriorityFeePerGas);
-              if (currentMaxPriority < maxPriorityFeePerGas) {
-                userOp.maxPriorityFeePerGas = '0x' + maxPriorityFeePerGas.toString(16);
-              }
-            } else {
-              userOp.maxPriorityFeePerGas = '0x' + maxPriorityFeePerGas.toString(16);
-            }
-            
-            return userOp;
-          },
-        },
-      },
+    const userOperation = await createUserOperation(safe4337Pack.protocolKit, txList, {
+      entryPoint: entryPoint,
+      paymasterOptions:undefined,
+    });
+
+    const safeOperation = SafeOperationFactory.createSafeOperation(userOperation, {
+      chainId: BigInt(CHAIN_ID),
+      moduleAddress: customContracts?.safe4337ModuleAddress || '',
+      entryPoint: entryPoint,
+      validUntil:undefined,
+      validAfter:undefined
+    })
+
+    console.log("SAFE OPERATION", safeOperation);
+
+    const gasEstimation = await estimateAndApplyGas({
+      safeOperation,
+      bundlerUrl: BUNDLER_URL,
+      entryPoint,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
     });
     
+    console.log("GAS ESTIMATION", gasEstimation);
+   
     console.log('✅ Safe transaction created');
     console.log(`   Transactions: ${txList.length}\n`);
     

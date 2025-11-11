@@ -237,30 +237,9 @@
     pvtsutils "^1.3.6"
     tslib "^2.8.1"
 
-"@safe-global/api-kit@^2.5.8":
-  version "2.5.11"
-  resolved "https://registry.yarnpkg.com/@safe-global/api-kit/-/api-kit-2.5.11.tgz#e9f49647a8094968e28f3158cfd1dbd081c29e36"
-  integrity sha512-gNrbGI/vHbOplPrytTEe5+CmwOowkEjDoTqGxz6q/rQSEJ7d7z8YzVy8Zdia7ICld1nIymQmkBdXkLr2XrDwfQ==
-  dependencies:
-    "@safe-global/protocol-kit" "^5.2.4"
-    "@safe-global/types-kit" "^1.0.4"
-    node-fetch "^2.7.0"
-    viem "^2.21.8"
-
-"@safe-global/protocol-kit@^5.2.1", "@safe-global/protocol-kit@^5.2.4":
-  version "5.2.18"
-  resolved "https://registry.yarnpkg.com/@safe-global/protocol-kit/-/protocol-kit-5.2.18.tgz#b848362b5228b46083bd8579d18e69a65ceb4c9d"
-  integrity sha512-Yasndbl2huX62VhC96kQS43nSBbzK97WPnq8ACK9Dp/BtpN0jSdILtUidMkJ67PuBXUUN8I7NcK0AdE47Xqm8Q==
-  dependencies:
-    "@safe-global/safe-deployments" "^1.37.47"
-    "@safe-global/safe-modules-deployments" "^2.2.18"
-    "@safe-global/types-kit" "^1.0.5"
-    abitype "^1.0.2"
-    semver "^7.6.3"
-    viem "^2.21.8"
-  optionalDependencies:
-    "@noble/curves" "^1.6.0"
-    "@peculiar/asn1-schema" "^2.3.13"
+"@safe-global/api-kit@link:../safe-core-sdk/packages/api-kit":
+  version "0.0.0"
+  uid ""
 
 "@safe-global/protocol-kit@^6.1.1":
   version "6.1.1"
@@ -277,29 +256,18 @@
     "@noble/curves" "^1.6.0"
     "@peculiar/asn1-schema" "^2.3.13"
 
-"@safe-global/relay-kit@^4.1.0":
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/@safe-global/relay-kit/-/relay-kit-4.1.0.tgz#30ac5fab003d0fb8cf54a2addf65cc55344bc78c"
-  integrity sha512-r406wE6rOyDCDRxPtt5EJ4Ea66SrIxYUnYmwN/QFdIhZ1TTtBZ30gCPlHluahVQcdE9TYmYqDWtJTUEkTzMVWw==
-  dependencies:
-    "@gelatonetwork/relay-sdk" "^5.6.0"
-    "@safe-global/protocol-kit" "^6.1.1"
-    "@safe-global/safe-modules-deployments" "^2.2.14"
-    "@safe-global/types-kit" "^3.0.0"
-    semver "^7.7.2"
-    viem "^2.21.8"
+"@safe-global/protocol-kit@link:../safe-core-sdk/packages/protocol-kit":
+  version "0.0.0"
+  uid ""
 
-"@safe-global/safe-deployments@^1.37.42":
+"@safe-global/relay-kit@link:../safe-core-sdk/packages/relay-kit":
+  version "0.0.0"
+  uid ""
+
+"@safe-global/safe-deployments@^1.37.42", "@safe-global/safe-deployments@^1.37.43":
   version "1.37.48"
   resolved "https://registry.yarnpkg.com/@safe-global/safe-deployments/-/safe-deployments-1.37.48.tgz#63f20cc51fb87f375fc08dec6efb7d809911a4fa"
   integrity sha512-SeRkHlKDwtRarhpU2Ow7dFebJRppIGoYCMMeiTcW/MPovswvQGkPlki2/VoYKKKkRupTRXJ2VyRygdeKYz6VeQ==
-  dependencies:
-    semver "^7.6.2"
-
-"@safe-global/safe-deployments@^1.37.47":
-  version "1.37.47"
-  resolved "https://registry.yarnpkg.com/@safe-global/safe-deployments/-/safe-deployments-1.37.47.tgz#9343451979d8ec53676ec71eb6ee422732ca1cd8"
-  integrity sha512-abxu9nmvjfDahCIFdrHw4ENZ1CD60z/bgrv5cV3+sygADU1vuh96jFumebo+6PR/Q5qz5glrQuLwEtZ8K/lvJQ==
   dependencies:
     semver "^7.6.2"
 
@@ -307,18 +275,6 @@
   version "2.2.19"
   resolved "https://registry.yarnpkg.com/@safe-global/safe-modules-deployments/-/safe-modules-deployments-2.2.19.tgz#4f11d14a69f579fbc74079f34548e2e6c778b181"
   integrity sha512-+i3FQwZP34pJLCzLgMf5mUM0bJra+Y5iZiVsGEzRzpuVyFxvvoEiINJH58y02oYu5+ymf4Td9MvSDoNvDJwJbw==
-
-"@safe-global/safe-modules-deployments@^2.2.18":
-  version "2.2.18"
-  resolved "https://registry.yarnpkg.com/@safe-global/safe-modules-deployments/-/safe-modules-deployments-2.2.18.tgz#51cf689da2b979d9b0bbccd7d2dbf4741b33b872"
-  integrity sha512-OQwoguGdano/XPMSbzc9cMuRXW84KCSAoG9avKRo5O4AcGLMNDqXTYG993a3k6QeWGpPwpl9LFEpwT0oAZ6UwQ==
-
-"@safe-global/types-kit@^1.0.4", "@safe-global/types-kit@^1.0.5":
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/@safe-global/types-kit/-/types-kit-1.0.5.tgz#c513c3887ed0d3906f3a8429c5762258346f4ec8"
-  integrity sha512-LcAsApV1MDEEymw3ealYjFEoD+PoruPG7Ggt6eF+LX++OGFowMQAS+zK2d5sRReqFjxwUJzMGlS48aQKlQpfZg==
-  dependencies:
-    abitype "^1.0.2"
 
 "@safe-global/types-kit@^3.0.0":
   version "3.0.0"
@@ -733,7 +689,7 @@ resolve-pkg-maps@^1.0.0:
   resolved "https://registry.yarnpkg.com/resolve-pkg-maps/-/resolve-pkg-maps-1.0.0.tgz#616b3dc2c57056b5588c31cdf4b3d64db133720f"
   integrity sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==
 
-semver@^7.6.2, semver@^7.6.3, semver@^7.7.2:
+semver@^7.6.2, semver@^7.7.2:
   version "7.7.3"
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.3.tgz#4b5f4143d007633a8dc671cd0a6ef9147b8bb946"
   integrity sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==

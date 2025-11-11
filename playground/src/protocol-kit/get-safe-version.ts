@@ -11,7 +11,8 @@ const Safe = (SafeModule as any)?.default || SafeModule;
 // Configuration
 const RPC_URL = process.env.RPC_URL!;
 //const SAFE_WALLET_ADDRESS = "0xAC5D465B855D22f1a984f55A7859d197C11aA2E2";
-const SAFE_WALLET_ADDRESS = "0x3894305fe7a057a6543e74f36a7a252389701354";
+//const SAFE_WALLET_ADDRESS = "0x3894305fe7a057a6543e74f36a7a252389701354";
+const SAFE_WALLET_ADDRESS = "0x234A8E69f15179e38706CAd12550AfD8dbE3b6a3";
 
 (async () => {
     try {
