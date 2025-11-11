@@ -12,6 +12,7 @@
     "get-safe-version": "tsx src/protocol-kit/get-safe-version.ts",
     "enable-module": "tsx src/protocol-kit/enable-module.ts",
     "disable-module": "tsx src/protocol-kit/disable-module.ts",
+    "set-fallback-handler": "tsx src/protocol-kit/set-fallback-handler.ts",
     "safe-wallet-erc4337-v1": "tsx src/relay-kit/safe-wallet-erc4337-v1.ts",
     "safe-wallet-erc4337-v2": "tsx src/relay-kit/safe-wallet-erc4337-v2.ts",
     "safe-wallet-erc4337-v2.5": "tsx src/relay-kit/safe-wallet-erc4337-v2.5.ts",
