@@ -228,6 +228,7 @@ const ALCHEMY_NETWORKS: Record<string, string> = {
 
 //https://docs.safe.global/advanced/smart-account-supported-networks
 //ATTENTION!! Custom contracts configuration per network.
+//Addresses declared here must be checksumed to avoid conflicts. Can use https://ethsum.netlify.app/
 const SAFE_4337_CUSTOM_CONTRACTS: Record<
   string,
   {
