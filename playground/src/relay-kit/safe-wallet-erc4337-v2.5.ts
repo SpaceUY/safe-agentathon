@@ -3,6 +3,7 @@ dotenv.config();
 
 import { Safe4337Pack, SafeOperationFactory, createUserOperation } from '@safe-global/relay-kit';
 import { ethers } from 'ethers';
+import { getSafe4337CustomContracts } from '../helpers/safeModules';
 const ENTRYPOINT_ADDRESS_V06 = '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'
 const ENTRYPOINT_ADDRESS_V07 = '0x0000000071727De22E5E9d8BAf0edAc6f37da032'
 
@@ -225,29 +226,6 @@ const ALCHEMY_NETWORKS: Record<string, string> = {
   '421614': 'arb-sepolia', // Arbitrum Sepolia
 };
 
-//https://docs.safe.global/advanced/smart-account-supported-networks
-//ATTENTION!! Custom contracts configuration per network.
-//Addresses declared here must be checksumed to avoid conflicts. Can use https://ethsum.netlify.app/
-const SAFE_4337_CUSTOM_CONTRACTS: Record<
-  string,
-  {
-    safe4337ModuleAddress?: string;
-    safeModulesSetupAddress?: string;
-    safeModulesVersion?: string;
-  }
-> = {
-  //  '80002': {
-  //   safe4337ModuleAddress: '0x75cf11467937ce3f2f357ce24ffc3dbf8fd5c226',
-  //   safeModulesSetupAddress: '0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47',
-  //   safeModulesVersion: '0.3.0',
-  // },
-  '80002': {
-    safe4337ModuleAddress: '0xa581c4A4DB7175302464fF3C06380BC3270b4037',
-    safeModulesSetupAddress: '0x8EcD4ec46D4D2a6B64fE960B3D64e8B94B2234eb',
-    safeModulesVersion: '0.2.0',
-  },
-};
-
 // Configuration
 const RPC_URL = process.env.RPC_URL!;
 const CHAIN_ID = process.env.CHAIN_ID!;
@@ -268,7 +246,7 @@ if (process.env.BUNDLER_RPC_URL) {
 const transferTo = process.env.TRANSFER_TO || "0x26aCB57e5ee79342e959b50475455Df2C2018A37";
 const transferAmount = 1n;
 
-const chainConfig = SAFE_4337_CUSTOM_CONTRACTS[CHAIN_ID];
+const chainConfig = getSafe4337CustomContracts(CHAIN_ID, '0.2.0');
 const customContracts = chainConfig
   ? {
       ...(chainConfig.safe4337ModuleAddress
