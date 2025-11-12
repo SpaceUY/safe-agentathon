@@ -12,7 +12,7 @@ const SAFE_4337_CUSTOM_CONTRACTS_BY_CHAIN: Record<
 > = {
   '80002': [
     {
-      safe4337ModuleAddress: '0x75cf11467937ce3f2f357ce24ffc3dbf8fd5c226',
+      safe4337ModuleAddress: '0x75cf11467937ce3F2f357CE24ffc3DBF8fD5c226',
       safeModulesSetupAddress: '0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47',
       safeModulesVersion: '0.3.0',
     },
@@ -24,7 +24,7 @@ const SAFE_4337_CUSTOM_CONTRACTS_BY_CHAIN: Record<
   ],
   '11155111': [
     {
-        safe4337ModuleAddress: '0x75cf11467937ce3f2f357ce24ffc3dbf8fd5c226',
+        safe4337ModuleAddress: '0x75cf11467937ce3F2f357CE24ffc3DBF8fD5c226',
         safeModulesSetupAddress: '0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47',
         safeModulesVersion: '0.3.0',
       },
