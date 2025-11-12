@@ -1,0 +1,564 @@
+import dotenv from "dotenv";
+dotenv.config();
+
+import { Safe4337Pack, SafeOperationFactory, createUserOperation } from '@safe-global/relay-kit';
+import { ethers } from 'ethers';
+import { getSafe4337CustomContracts } from '../helpers/safeModules';
+const ENTRYPOINT_ADDRESS_V06 = '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'
+const ENTRYPOINT_ADDRESS_V07 = '0x0000000071727De22E5E9d8BAf0edAc6f37da032'
+
+//RECORDAR:
+//Fondear sender
+//Fondear safe (antes predecirla), al menos 1 wei que es lo que se transfiere al llamar transferFromSafe
+//Cambiar salt si se quiere usar una billetera nueva
+
+// Safe deployment configuration (from index.ts)
+const salt = "0x123456789123";//Already deployed
+//const salt = "0x123456789123909";//Not deployed (Check just in case)
+const safeVersion = "1.4.1";
+const deploymentType = "canonical";
+
+// Helper function to serialize BigInt values in JSON
+function jsonStringifyWithBigInt(obj: any, space?: number | string): string {
+  return JSON.stringify(
+    obj,
+    (key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    },
+    space
+  );
+}
+
+// Helper function to convert user operation numeric fields to hex strings
+// ERC-4337 bundlers expect numeric fields as hex strings (0x...)
+function convertUserOperationToHex(userOp: any): any {
+  const numericFields = [
+    'nonce',
+    'callGasLimit',
+    'verificationGasLimit',
+    'preVerificationGas',
+    'maxFeePerGas',
+    'maxPriorityFeePerGas',
+  ];
+
+  const converted = { ...userOp };
+  
+  for (const field of numericFields) {
+    if (field in converted && converted[field] !== undefined && converted[field] !== null) {
+      const value = converted[field];
+      // Convert if it's a number, BigInt, or numeric string (not already hex)
+      if (typeof value === 'bigint') {
+        converted[field] = '0x' + value.toString(16);
+      } else if (typeof value === 'number') {
+        converted[field] = '0x' + value.toString(16);
+      } else if (typeof value === 'string') {
+        if (value.startsWith('0x')) {
+          // Already hex, leave as is
+          // No conversion needed
+        } else if (value === '' || value === '0') {
+          // Empty string or "0" should be "0x0"
+          converted[field] = '0x0';
+        } else {
+          // It's a decimal string, convert to hex
+          try {
+            const numValue = BigInt(value);
+            converted[field] = '0x' + numValue.toString(16);
+          } catch (e) {
+            // If conversion fails, leave as is
+            console.warn(`Could not convert ${field} value "${value}" to hex, leaving as is`);
+          }
+        }
+      }
+    }
+  }
+  
+  return converted;
+}
+
+function pruneUserOperationFields(userOp: Record<string, any>) {
+  const fieldsToDelete = [
+    'paymaster',
+    'paymasterData',
+    'paymasterVerificationGasLimit',
+    'paymasterPostOpGasLimit',
+  ];
+
+  for (const field of fieldsToDelete) {
+    if (field in userOp) {
+      delete userOp[field];
+    }
+  }
+}
+
+async function submitUserOperation({
+  safeOperation,
+  bundlerUrl,
+  entryPoint,
+}: {
+  safeOperation: any;
+  bundlerUrl: string;
+  entryPoint: string;
+  apiKey?: string;
+}): Promise<string> {
+  const userOperationWithSignature = safeOperation.getUserOperation();
+
+  const userOperationHex = convertUserOperationToHex(userOperationWithSignature);
+
+  const requestBody = {
+    jsonrpc: '2.0',
+    method: 'eth_sendUserOperation',
+    params: [userOperationHex, entryPoint],
+    id: Date.now(),
+  };
+
+  console.log('=== Submitting User Operation ===');
+  console.log('UserOperation:', jsonStringifyWithBigInt(userOperationHex, 2));
+  console.log('Entry Point:', entryPoint);
+  console.log('Request body:', jsonStringifyWithBigInt(requestBody, 2));
+  console.log('================================');
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  const response = await fetch(bundlerUrl, {
+    method: 'POST',
+    headers,
+    body: jsonStringifyWithBigInt(requestBody),
+  });
+
+  const result: any = await response.json();
+
+  console.log('=== User Operation Submission Response ===');
+  console.log('Result:', jsonStringifyWithBigInt(result, 2));
+  console.log('=========================================');
+
+  if (result.error) {
+    throw new Error(result.error.message || 'User operation submission failed');
+  }
+
+  return result.result;
+}
+
+async function estimateAndApplyGas({
+  safeOperation,
+  bundlerUrl,
+  entryPoint,
+}: {
+  safeOperation: any;
+  bundlerUrl: string;
+  entryPoint: string;
+}) {
+  const baseUserOp = (safeOperation as any).userOperation;
+  const entryPointAddress = entryPoint.toLowerCase();
+  const isEntryPointV06 = entryPointAddress === ENTRYPOINT_ADDRESS_V06.toLowerCase();
+
+  const userOpPayload: any = {
+    sender: baseUserOp.sender,
+    nonce: baseUserOp.nonce,
+    callData: baseUserOp.callData,
+    verificationGasLimit: baseUserOp.verificationGasLimit,
+    preVerificationGas: baseUserOp.preVerificationGas,
+    signature: "0x000000000000000000000000",
+  };
+
+  if (isEntryPointV06) {
+    if (baseUserOp.initCode) {
+      userOpPayload.initCode = baseUserOp.initCode;
+    }
+    if (baseUserOp.paymasterAndData) {
+      userOpPayload.paymasterAndData = baseUserOp.paymasterAndData;
+    }
+  } else {
+    if (baseUserOp.factory) {
+      userOpPayload.factory = baseUserOp.factory;
+    }
+    if (baseUserOp.factoryData) {
+      userOpPayload.factoryData = baseUserOp.factoryData;
+    }
+    if (baseUserOp.paymaster !== undefined && baseUserOp.paymaster !== "0x") {
+        userOpPayload.paymaster = baseUserOp.paymaster;
+        userOpPayload.paymasterData = baseUserOp.paymasterData;
+        userOpPayload.paymasterVerificationGasLimit = baseUserOp.paymasterVerificationGasLimit ?? "0";
+        userOpPayload.paymasterPostOpGasLimit = baseUserOp.paymasterPostOpGasLimit ?? "0";
+    }
+  }
+
+  const userOpHex = convertUserOperationToHex(userOpPayload);
+
+  const requestBody = {
+    jsonrpc: '2.0',
+    method: 'eth_estimateUserOperationGas',
+    params: [userOpHex, entryPoint],
+    id: 1,
+  };
+
+  console.log("=== Request to Bundler ===");
+  console.log("Original userOp:", jsonStringifyWithBigInt(baseUserOp, 2));
+  console.log("Prepared userOp:", jsonStringifyWithBigInt(userOpHex, 2));
+  console.log("Entry Point:", entryPoint);
+  console.log("Request body:", jsonStringifyWithBigInt(requestBody, 2));
+  console.log("==========================");
+
+  const response = await fetch(bundlerUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: jsonStringifyWithBigInt(requestBody),
+  });
+
+  const result: any = await response.json();
+
+  console.log("=== Bundler Response ===");
+  console.log("Result:", jsonStringifyWithBigInt(result, 2));
+  console.log("=======================");
+  if (result.error) {
+    throw new Error(result.error.message || 'Gas estimation failed');
+  }
+
+  const addBuffer = (value: string, bufferPercent: number = 5, minBuffer: number = 1000): string => {
+    const hexValue = value.startsWith('0x') ? value.slice(2) : value;
+    const numValue = BigInt('0x' + hexValue);
+    const buffer = numValue * BigInt(bufferPercent) / BigInt(100);
+    const minBufferBigInt = BigInt(minBuffer);
+    const finalBuffer = buffer > minBufferBigInt ? buffer : minBufferBigInt;
+    const finalValue = numValue + finalBuffer;
+    return '0x' + finalValue.toString(16);
+  };
+
+  const callGasLimit = addBuffer(result.result.callGasLimit, 5, 1000);
+  const verificationGasLimit = addBuffer(result.result.verificationGasLimit, 5, 1000);
+  const preVerificationGas = addBuffer(result.result.preVerificationGas, 5, 1000);
+
+  const estimations = {
+    callGasLimit,
+    verificationGasLimit,
+    preVerificationGas,
+  };
+
+  safeOperation.addEstimations(estimations);
+
+  console.log("=== Gas Values with Buffer ===");
+  console.log(`callGasLimit: ${result.result.callGasLimit} -> ${callGasLimit}`);
+  console.log(`verificationGasLimit: ${result.result.verificationGasLimit} -> ${verificationGasLimit}`);
+  console.log(`preVerificationGas: ${result.result.preVerificationGas} -> ${preVerificationGas}`);
+  console.log("==============================");
+
+  return estimations;
+}
+// Configuration
+const RPC_URL = process.env.RPC_URL!;
+const CHAIN_ID = process.env.CHAIN_ID!;
+const PRIVATE_KEY = process.env.PRIVATE_KEY!; // Safe owner's private key
+const GELATO_API_KEY = process.env.GELATO_API_KEY!;
+
+// Build bundler URL
+let BUNDLER_URL: string | undefined;
+
+if (process.env.BUNDLER_RPC_URL) {
+  BUNDLER_URL = process.env.BUNDLER_RPC_URL;
+} else if (GELATO_API_KEY) {
+  BUNDLER_URL = `https://api.gelato.digital/bundlers/${CHAIN_ID}/rpc?apiKey=${GELATO_API_KEY}&sponsored=true`;
+}
+
+// Transfer configuration
+const transferTo = process.env.TRANSFER_TO || "0x26aCB57e5ee79342e959b50475455Df2C2018A37";
+const transferAmount = 1n;
+
+const chainConfig = getSafe4337CustomContracts(CHAIN_ID, '0.3.0');
+const customContracts = chainConfig
+  ? {
+      ...(chainConfig.safe4337ModuleAddress
+        ? { safe4337ModuleAddress: chainConfig.safe4337ModuleAddress }
+        : {}),
+      ...(chainConfig.safeModulesSetupAddress
+        ? { safeModulesSetupAddress: chainConfig.safeModulesSetupAddress }
+        : {}),
+    }
+  : undefined;
+const safeModulesVersion = chainConfig?.safeModulesVersion;
+
+/**
+ * Predicts the Safe wallet address using Safe4337Pack
+ * @returns The predicted Safe address
+ */
+export async function predictSafe(): Promise<string> {
+  console.log('🔮 Safe Wallet Address Predictor');
+  console.log('==================================\n');
+
+  try {
+    // Initialize provider and wallet
+    const provider = new ethers.JsonRpcProvider(RPC_URL);
+    const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+
+    console.log('📋 Configuration:');
+    console.log(`   Owner Address: ${wallet.address}`);
+    console.log(`   Chain ID: ${CHAIN_ID}`);
+    console.log(`   Salt: ${salt}`);
+    console.log(`   Safe Version: ${safeVersion}`);
+    console.log(`   Deployment Type: ${deploymentType}\n`);
+
+    if (!BUNDLER_URL) {
+      throw new Error(
+       `Cannot determine bundler URL. Either provide BUNDLER_RPC_URL or set GELATO_API_KEY`
+      );
+    }
+
+    // Initialize Safe4337Pack
+    console.log('📦 Initializing Safe4337Pack...', RPC_URL, BUNDLER_URL);
+    const safe4337Pack = await Safe4337Pack.init({
+      provider: RPC_URL,
+      bundlerUrl: BUNDLER_URL,
+      ...(safeModulesVersion ? { safeModulesVersion } : {}),
+      ...(customContracts ? { customContracts } : {}),
+      options: {
+        owners: [wallet.address],
+        threshold: 1,
+        saltNonce: salt,
+        safeVersion: safeVersion,
+        deploymentType: deploymentType as any,
+      },
+    });
+
+    console.log('✅ Safe4337Pack initialized\n');
+    
+    // Get the predicted Safe address from the internal protocolKit
+    // Safe4337Pack uses protocolKit internally which has getAddress()
+    const predictedAddress = await (safe4337Pack as any).protocolKit?.getAddress();
+    
+    if (!predictedAddress) {
+      throw new Error('Could not get Safe address from Safe4337Pack');
+    }
+
+    console.log('📍 Predicted Safe Address:');
+    console.log(`   ${predictedAddress}\n`);
+
+    // Check if Safe is already deployed
+    const providerInstance = new ethers.JsonRpcProvider(RPC_URL);
+    const code = await providerInstance.getCode(predictedAddress);
+    const isDeployed = code !== '0x';
+
+    console.log(`📊 Deployment Status: ${isDeployed ? '✅ Already Deployed' : '❌ Not Deployed'}\n`);
+
+    console.log('✨ Prediction completed!\n');
+
+    return predictedAddress;
+  } catch (error) {
+    console.error('❌ Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Executes a user operation using Safe4337Pack
+ * @param transactions - Array of transactions to execute
+ * @returns The user operation hash
+ */
+export async function execute(transactions?: Array<{ to: string; value: string; data: string }>): Promise<string> {
+  console.log('🚀 Safe Wallet User Operation - Using Relay Kit');
+  console.log('================================================\n');
+
+  try {
+    // Initialize provider and wallet
+    const provider = new ethers.JsonRpcProvider(RPC_URL);
+    const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+
+    // Use provided transactions or default transfer
+    const txList = transactions || [
+      {
+        to: transferTo,
+        value: transferAmount.toString(),
+        data: '0x',
+      },
+    ];
+
+    console.log('📋 Configuration:');
+    console.log(`   Owner Address: ${wallet.address}`);
+    console.log(`   Chain ID: ${CHAIN_ID}`);
+    console.log(`   Transactions: ${txList.length}`);
+    console.log(`   Bundler URL: ${BUNDLER_URL || 'Not configured'}`);
+
+    if (!BUNDLER_URL) {
+      throw new Error(
+       `Cannot determine bundler URL. Either provide BUNDLER_RPC_URL or set GELATO_API_KEY`
+      );
+    }
+
+    // Initialize Safe4337Pack
+    console.log('📦 Initializing Safe4337Pack...');
+    const safe4337Pack = await Safe4337Pack.init({
+      provider: RPC_URL,
+      bundlerUrl: BUNDLER_URL,
+      ...(safeModulesVersion ? { safeModulesVersion } : {}),
+      ...(customContracts ? { customContracts } : {}),
+      options: {
+        owners: [wallet.address],
+        threshold: 1,
+        saltNonce: salt,
+        safeVersion: safeVersion,
+        deploymentType: deploymentType as any,
+      },
+    });
+
+    console.log('✅ Safe4337Pack initialized\n');
+    // Create Safe transaction
+    console.log('📝 Creating Safe transaction...');
+    
+    // Get current gas prices from the network
+    let entryPoint: string;
+    if(safeModulesVersion === '0.2.0') {
+      entryPoint = ENTRYPOINT_ADDRESS_V06;
+    } else {
+      entryPoint = ENTRYPOINT_ADDRESS_V07;
+    }
+
+    const userOperation = await createUserOperation(safe4337Pack.protocolKit, txList, {
+      entryPoint: entryPoint,
+      paymasterOptions: undefined
+    });
+
+    pruneUserOperationFields(userOperation);
+    //Gelato requires this to be 0
+    userOperation.preVerificationGas = 0n;
+    userOperation.maxFeePerGas = 0n;
+    userOperation.maxPriorityFeePerGas = 0n;
+
+    const safeOperation = SafeOperationFactory.createSafeOperation(userOperation, {
+      chainId: BigInt(CHAIN_ID),
+      moduleAddress: customContracts?.safe4337ModuleAddress || '',
+      entryPoint: entryPoint,
+      validUntil:undefined,
+      validAfter:undefined
+    })
+
+    console.log("SAFE OPERATION", safeOperation);
+
+    const gasEstimation = await estimateAndApplyGas({
+      safeOperation,
+      bundlerUrl: BUNDLER_URL,
+      entryPoint,
+    });
+
+    console.log("GAS ESTIMATION", gasEstimation);
+   
+    console.log('✅ Safe transaction created');
+    console.log(`   Transactions: ${txList.length}\n`);
+    
+    // Sign the user operation with ethers (separate signing)
+    console.log('✍️ Signing user operation with ethers...');
+    
+    // Check the safeOperation structure to understand what we have
+    console.log(`   SafeOperation keys: ${JSON.stringify(Object.keys(safeOperation))}`);
+    
+    // Get the hash to sign from the safeOperation
+    // The Safe4337Pack should provide a way to get the hash
+    // Let's check if safeOperation has a method to get the hash or if the pack has one
+
+    let operationHash: string = await (safeOperation as any).getHash();
+    
+    console.log(`   Operation Hash: ${operationHash}\n`);
+    
+    // Sign the hash with ethers (like we do in index.ts)
+    console.log('   Signing hash with ethers...');
+    const signingKey = new ethers.SigningKey(PRIVATE_KEY);
+    const signature = signingKey.sign(operationHash);
+    
+    console.log(`   ✅ Signature created: ${signature.serialized.toString()}\n`);
+    
+    // Add the signature to the safeOperation
+    // The safeOperation should have an addSignature method (like Safe SDK)
+    const safeSignatureObj = {
+      signer: wallet.address,
+      data: signature.serialized.toString(),
+      isContractSignature: false,
+    };
+
+    // Add signature to safeOperation using addSignature method
+    safeOperation.addSignature(safeSignatureObj as any);
+    console.log('✅ Signature added to safeOperation\n');
+    
+    // The safeOperation should now be signed
+    const signedSafeOperation = safeOperation;
+    
+    // Submit the user operation
+    console.log('📡 Submitting user operation to bundler (custom submit)...');
+    const userOperationHash = await submitUserOperation({
+      safeOperation: signedSafeOperation,
+      bundlerUrl: BUNDLER_URL,
+      entryPoint,
+    });
+    
+    console.log('✅ User operation submitted!');
+    console.log(`   UserOp Hash: ${userOperationHash}\n`);
+    
+    // Check transaction status
+    console.log('⏳ Waiting for transaction to be mined...');
+    let userOperationReceipt = null;
+    let attempts = 0;
+    const maxAttempts = 30; // Wait up to 60 seconds (30 * 2 seconds)
+    
+    while (!userOperationReceipt && attempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      attempts++;
+      
+      try {
+        userOperationReceipt = await safe4337Pack.getUserOperationReceipt(
+          userOperationHash
+        );
+        
+        if (userOperationReceipt) {
+          console.log('✅ Transaction confirmed!');
+          console.log(`   Receipt: ${jsonStringifyWithBigInt(userOperationReceipt, 2)}\n`);
+          break;
+        }
+      } catch (error: any) {
+        // Receipt not ready yet, continue waiting
+        if (attempts % 5 === 0) {
+          console.log(`   Still waiting... (attempt ${attempts}/${maxAttempts})`);
+        }
+      }
+    }
+    
+    if (!userOperationReceipt) {
+      console.log('⚠️  Transaction receipt not available yet');
+      console.log(`   UserOp Hash: ${userOperationHash}`);
+      console.log(`   You can check the status manually using the bundler API\n`);
+    }
+    
+    // Get user operation details
+    try {
+      console.log('🔍 Getting user operation details...');
+      const userOperationPayload = await safe4337Pack.getUserOperationByHash(
+        userOperationHash
+      );
+      
+      if (userOperationPayload) {
+        console.log('✅ User operation details retrieved');
+        console.log(`   Payload: ${jsonStringifyWithBigInt(userOperationPayload, 2)}\n`);
+      }
+    } catch (error: any) {
+      console.log(`   ⚠️  Could not retrieve user operation details: ${error.message}\n`);
+    }
+    
+    console.log('✨ User operation completed!\n');
+
+    return userOperationHash;
+  } catch (error) {
+    console.error('❌ Error:', error);
+    throw error;
+  }
+}
+
+//predictSafe()
+execute()
+  .then(() => {
+    console.log('\n✨ Playground completed!');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('💥 Fatal error:', error);
+    process.exit(1);
+  });
+
